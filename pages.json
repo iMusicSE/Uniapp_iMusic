@@ -53,20 +53,20 @@
 		"list": [
 			{
 				"pagePath": "pages/discover/discover",
-				"iconPath": "static/logo.png",
-				"selectedIconPath": "static/logo.png",
+				"iconPath": "static/tabs/discover.svg",
+				"selectedIconPath": "static/tabs/discover-active.svg",
 				"text": "发现"
 			},
 			{
 				"pagePath": "pages/search/search",
-				"iconPath": "static/logo.png",
-				"selectedIconPath": "static/logo.png",
+				"iconPath": "static/tabs/search.svg",
+				"selectedIconPath": "static/tabs/search-active.svg",
 				"text": "搜索"
 			},
 			{
 				"pagePath": "pages/mine/mine",
-				"iconPath": "static/logo.png",
-				"selectedIconPath": "static/logo.png",
+				"iconPath": "static/tabs/mine.svg",
+				"selectedIconPath": "static/tabs/mine-active.svg",
 				"text": "我的"
 			}
 		]
