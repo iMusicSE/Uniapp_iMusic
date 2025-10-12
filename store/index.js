@@ -146,6 +146,55 @@ const store = createStore({
 		// 设置收藏列表（用于清空）
 		SET_FAVORITES(state, favorites) {
 			state.favorites = favorites
+		},
+		
+		// 从播放列表移除歌曲
+		REMOVE_FROM_PLAYLIST(state, index) {
+			state.playlist.splice(index, 1)
+			// 如果移除的是当前播放的歌曲之前的歌曲，需要调整索引
+			if (index < state.currentIndex) {
+				state.currentIndex--
+			}
+			// 如果移除的正好是当前播放的歌曲
+			else if (index === state.currentIndex) {
+				// 如果还有歌曲，保持索引不变（会自动切到下一首）
+				// 如果索引超出范围，调整为最后一首
+				if (state.currentIndex >= state.playlist.length) {
+					state.currentIndex = state.playlist.length - 1
+				}
+			}
+		},
+		
+		// 清空播放列表
+		CLEAR_PLAYLIST(state) {
+			state.playlist = []
+			state.currentIndex = 0
+		},
+		
+		// 添加歌曲到播放列表（不立即播放）
+		ADD_TO_PLAYLIST(state, song) {
+			// 检查是否已存在
+			const exists = state.playlist.some(item => item.id === song.id)
+			if (!exists) {
+				state.playlist.push(song)
+			}
+		},
+		
+		// 插入到播放列表（当前歌曲后面）
+		INSERT_TO_PLAYLIST(state, song) {
+			// 检查是否已存在
+			const existIndex = state.playlist.findIndex(item => item.id === song.id)
+			if (existIndex >= 0) {
+				// 如果已存在，先移除
+				state.playlist.splice(existIndex, 1)
+				// 调整当前索引
+				if (existIndex <= state.currentIndex) {
+					state.currentIndex--
+				}
+			}
+			// 插入到当前播放位置的下一首
+			const insertIndex = state.currentIndex + 1
+			state.playlist.splice(insertIndex, 0, song)
 		}
 	},
 	
@@ -264,6 +313,78 @@ const store = createStore({
 		// 加载本地数据
 		loadLocalData({ commit }) {
 			commit('LOAD_LOCAL_DATA')
+		},
+		
+		// 从播放列表移除歌曲
+		removeFromPlaylist({ commit, state, dispatch }, index) {
+			if (index < 0 || index >= state.playlist.length) return
+			
+			const isCurrentSong = index === state.currentIndex
+			const wasPlaying = state.isPlaying
+			
+			commit('REMOVE_FROM_PLAYLIST', index)
+			
+			// 如果移除的是当前播放的歌曲，且还有歌曲
+			if (isCurrentSong && state.playlist.length > 0) {
+				const song = state.playlist[state.currentIndex]
+				if (song) {
+					dispatch('playSong', { song })
+				}
+			}
+			// 如果播放列表空了
+			else if (state.playlist.length === 0) {
+				commit('SET_CURRENT_SONG', null)
+				commit('SET_PLAY_STATE', false)
+				if (state.audioContext) {
+					state.audioContext.stop()
+				}
+			}
+			
+			uni.showToast({
+				title: '已从播放列表移除',
+				icon: 'none'
+			})
+		},
+		
+		// 清空播放列表
+		clearPlaylist({ commit, state }) {
+			commit('CLEAR_PLAYLIST')
+			commit('SET_CURRENT_SONG', null)
+			commit('SET_PLAY_STATE', false)
+			
+			if (state.audioContext) {
+				state.audioContext.stop()
+			}
+			
+			uni.showToast({
+				title: '已清空播放列表',
+				icon: 'success'
+			})
+		},
+		
+		// 添加到播放列表（不立即播放）
+		addToPlaylist({ commit }, song) {
+			commit('ADD_TO_PLAYLIST', song)
+			uni.showToast({
+				title: '已添加到播放列表',
+				icon: 'success'
+			})
+		},
+		
+		// 插入到播放列表（下一首播放）
+		insertToPlaylist({ commit, state }, song) {
+			if (state.playlist.length === 0) {
+				// 如果播放列表为空，直接添加并播放
+				commit('SET_PLAYLIST', [song])
+				commit('SET_CURRENT_INDEX', 0)
+				commit('SET_CURRENT_SONG', song)
+			} else {
+				commit('INSERT_TO_PLAYLIST', song)
+			}
+			uni.showToast({
+				title: '将在下一首播放',
+				icon: 'success'
+			})
 		}
 	}
 })

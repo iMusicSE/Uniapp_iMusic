@@ -88,13 +88,20 @@
 				<text class="control-icon">📑</text>
 			</view>
 		</view>
+		
+		<!-- 播放列表弹窗 -->
+		<Playlist :visible="playlistVisible" @close="playlistVisible = false" />
 	</view>
 </template>
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
+import Playlist from '@/components/Playlist.vue'
 
 export default {
+	components: {
+		Playlist
+	},
 	data() {
 		return {
 			bgColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -102,7 +109,8 @@ export default {
 			currentLyricIndex: 0,
 			lyricsScrollTop: 0,
 			showLyrics: false,
-			loadingLyrics: false
+			loadingLyrics: false,
+			playlistVisible: false
 		}
 	},
 	computed: {
@@ -175,10 +183,7 @@ export default {
 		},
 		
 		showPlaylist() {
-			uni.showToast({
-				title: '播放列表功能待开发',
-				icon: 'none'
-			})
+			this.playlistVisible = true
 		},
 		
 		// 加载歌词

@@ -55,7 +55,7 @@ export default {
 		...mapGetters(['isFavorite'])
 	},
 	methods: {
-		...mapActions(['playSong', 'toggleFavorite']),
+		...mapActions(['playSong', 'toggleFavorite', 'addToPlaylist']),
 		
 		handlePlay(song, index) {
 			this.playSong({
@@ -66,9 +66,22 @@ export default {
 		
 		showMore(song) {
 			uni.showActionSheet({
-				itemList: ['添加到播放列表', '查看专辑', '分享'],
+				itemList: ['添加到播放列表', '下一首播放', '查看专辑', '分享'],
 				success: (res) => {
 					if (res.tapIndex === 0) {
+						// 添加到播放列表
+						this.addToPlaylist(song)
+					} else if (res.tapIndex === 1) {
+						// 下一首播放
+						this.playNext(song)
+					} else if (res.tapIndex === 2) {
+						// 查看专辑
+						uni.showToast({
+							title: '功能待开发',
+							icon: 'none'
+						})
+					} else if (res.tapIndex === 3) {
+						// 分享
 						uni.showToast({
 							title: '功能待开发',
 							icon: 'none'
@@ -76,6 +89,11 @@ export default {
 					}
 				}
 			})
+		},
+		
+		// 下一首播放（插入到当前歌曲后面）
+		playNext(song) {
+			this.$store.dispatch('insertToPlaylist', song)
 		}
 	}
 }
