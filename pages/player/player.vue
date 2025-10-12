@@ -25,13 +25,17 @@
 	<!-- 歌词区域 -->
 	<view class="lyrics-section" v-if="showLyrics" @click="toggleLyrics">
 		<scroll-view 
+			id="lyrics-scroll-view"
 			class="lyrics-scroll" 
 			scroll-y 
 			:scroll-top="lyricsScrollTop"
 			:scroll-with-animation="true"
 		>
 			<view class="lyrics-list">
+				<!-- 顶部填充空间，使第一句歌词可以居中 -->
+				<view class="lyrics-padding"></view>
 				<view 
+					:id="'lyric-line-' + index"
 					class="lyric-line" 
 					v-for="(line, index) in lyrics" 
 					:key="index"
@@ -40,6 +44,8 @@
 					{{ line.text }}
 				</view>
 				<view class="lyrics-end">- END -</view>
+				<!-- 底部填充空间，使最后一句歌词可以居中 -->
+				<view class="lyrics-padding"></view>
 			</view>
 		</scroll-view>
 	</view>
@@ -51,7 +57,7 @@
 		</text>
 		<text class="action-icon" @click="downloadSong">⬇️</text>
 		<text class="action-icon" @click="comment">💬</text>
-		<text class="action-icon" @click="showPlaylist">📑</text>
+		<text class="action-icon" @click="showMusicInfo">🛈</text>
 	</view>
 		
 		<!-- 进度条 -->
@@ -171,20 +177,27 @@ export default {
 			})
 		},
 		
-		comment() {
-			uni.showToast({
-				title: '评论功能待开发',
-				icon: 'none'
-			})
-		},
-		
-		toggleLyrics() {
-			this.showLyrics = !this.showLyrics
-		},
-		
-		showPlaylist() {
-			this.playlistVisible = true
-		},
+	comment() {
+		uni.showToast({
+			title: '评论功能待开发',
+			icon: 'none'
+		})
+	},
+	
+	showMusicInfo() {
+		uni.showToast({
+			title: '正在开发中',
+			icon: 'none'
+		})
+	},
+	
+	toggleLyrics() {
+		this.showLyrics = !this.showLyrics
+	},
+	
+	showPlaylist() {
+		this.playlistVisible = true
+	},
 		
 		// 加载歌词
 		async loadLyrics(songId) {
@@ -253,16 +266,53 @@ export default {
 		updateCurrentLyric() {
 			if (this.lyrics.length === 0) return
 			
+			let newLyricIndex = 0
 			for (let i = 0; i < this.lyrics.length; i++) {
 				if (this.currentTime < this.lyrics[i].time) {
-					this.currentLyricIndex = i - 1
-					if (this.currentLyricIndex >= 0) {
-						this.lyricsScrollTop = this.currentLyricIndex * 80 - 200
-					}
-					return
+					newLyricIndex = i - 1
+					break
+				}
+				if (i === this.lyrics.length - 1) {
+					newLyricIndex = i
 				}
 			}
-			this.currentLyricIndex = this.lyrics.length - 1
+			
+			// 如果歌词索引发生变化，才滚动
+			if (newLyricIndex >= 0 && newLyricIndex !== this.currentLyricIndex) {
+				this.currentLyricIndex = newLyricIndex
+				this.scrollToCenter()
+			}
+		},
+		
+		// 滚动到居中位置
+		scrollToCenter() {
+			this.$nextTick(() => {
+				const query = uni.createSelectorQuery().in(this)
+				
+				// 获取滚动容器的高度
+				query.select('#lyrics-scroll-view').boundingClientRect()
+				// 获取当前激活歌词行的位置
+				query.select('#lyric-line-' + this.currentLyricIndex).boundingClientRect()
+				
+				query.exec((res) => {
+					if (res && res[0] && res[1]) {
+						const scrollViewHeight = res[0].height
+						const lyricLineTop = res[1].top
+						const lyricLineHeight = res[1].height
+						const scrollViewTop = res[0].top
+						
+						// 计算歌词行相对于滚动容器的位置
+						const relativeTop = lyricLineTop - scrollViewTop
+						
+						// 计算需要滚动的距离，使歌词行位于容器中心
+						// 目标位置 = 当前滚动位置 + 歌词行相对位置 - (容器高度 / 2) + (歌词行高度 / 2)
+						const targetScrollTop = this.lyricsScrollTop + relativeTop - (scrollViewHeight / 2) + (lyricLineHeight / 2)
+						
+						// 更新滚动位置，确保不小于0
+						this.lyricsScrollTop = Math.max(0, targetScrollTop)
+					}
+				})
+			})
 		},
 		
 		// 进度条拖动中
@@ -399,6 +449,10 @@ export default {
 
 .lyrics-list {
 	padding: 0 40rpx;
+}
+
+.lyrics-padding {
+	height: 50vh;
 }
 
 .lyric-line {
