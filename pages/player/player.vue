@@ -10,49 +10,49 @@
 			<text class="share-icon" @click="share">⋯</text>
 		</view>
 		
-		<!-- 封面区域 -->
-		<view class="cover-section">
-			<view class="cover-container" :class="{ 'rotating': isPlaying }">
-				<image 
-					class="cover-image" 
-					:src="currentSong ? currentSong.albumPic : '/static/logo.png'" 
-					mode="aspectFill"
-				></image>
-				<view class="cover-disc"></view>
-			</view>
+	<!-- 封面区域 -->
+	<view class="cover-section" v-if="!showLyrics" @click="toggleLyrics">
+		<view class="cover-container" :class="{ 'rotating': isPlaying }">
+			<image 
+				class="cover-image" 
+				:src="currentSong ? currentSong.albumPic : '/static/logo.png'" 
+				mode="aspectFill"
+			></image>
+			<view class="cover-disc"></view>
 		</view>
-		
-		<!-- 歌词区域 -->
-		<view class="lyrics-section" v-if="showLyrics">
-			<scroll-view 
-				class="lyrics-scroll" 
-				scroll-y 
-				:scroll-top="lyricsScrollTop"
-				:scroll-with-animation="true"
-			>
-				<view class="lyrics-list">
-					<view 
-						class="lyric-line" 
-						v-for="(line, index) in lyrics" 
-						:key="index"
-						:class="{ 'active': currentLyricIndex === index }"
-					>
-						{{ line.text }}
-					</view>
-					<view class="lyrics-end">- END -</view>
+	</view>
+	
+	<!-- 歌词区域 -->
+	<view class="lyrics-section" v-if="showLyrics" @click="toggleLyrics">
+		<scroll-view 
+			class="lyrics-scroll" 
+			scroll-y 
+			:scroll-top="lyricsScrollTop"
+			:scroll-with-animation="true"
+		>
+			<view class="lyrics-list">
+				<view 
+					class="lyric-line" 
+					v-for="(line, index) in lyrics" 
+					:key="index"
+					:class="{ 'active': currentLyricIndex === index }"
+				>
+					{{ line.text }}
 				</view>
-			</scroll-view>
-		</view>
+				<view class="lyrics-end">- END -</view>
+			</view>
+		</scroll-view>
+	</view>
 		
-		<!-- 操作栏 -->
-		<view class="action-bar">
-			<text class="action-icon" :class="{ 'active': isFavorite(currentSong?.id) }" @click="toggleFavorite(currentSong)">
-				{{ isFavorite(currentSong?.id) ? '❤️' : '🤍' }}
-			</text>
-			<text class="action-icon" @click="downloadSong">⬇️</text>
-			<text class="action-icon" @click="comment">💬</text>
-			<text class="action-icon" @click="toggleLyrics">📄</text>
-		</view>
+	<!-- 操作栏 -->
+	<view class="action-bar">
+		<text class="action-icon" :class="{ 'active': isFavorite(currentSong?.id) }" @click="toggleFavorite(currentSong)">
+			{{ isFavorite(currentSong?.id) ? '❤️' : '🤍' }}
+		</text>
+		<text class="action-icon" @click="downloadSong">⬇️</text>
+		<text class="action-icon" @click="comment">💬</text>
+		<text class="action-icon" @click="showPlaylist">📑</text>
+	</view>
 		
 		<!-- 进度条 -->
 		<view class="progress-section">
@@ -81,13 +81,13 @@
 			<view class="control-btn play-btn" @click="togglePlay">
 				<text class="control-icon extra-large">{{ isPlaying ? '⏸' : '▶' }}</text>
 			</view>
-			<view class="control-btn" @click="playNext">
-				<text class="control-icon large">⏭</text>
-			</view>
-			<view class="control-btn" @click="showPlaylist">
-				<text class="control-icon">📑</text>
-			</view>
+		<view class="control-btn" @click="playNext">
+			<text class="control-icon large">⏭</text>
 		</view>
+		<view class="control-btn" @click="showPlaylist">
+			<text class="control-icon">☰</text>
+		</view>
+	</view>
 		
 		<!-- 播放列表弹窗 -->
 		<Playlist :visible="playlistVisible" @close="playlistVisible = false" />
@@ -290,12 +290,14 @@ export default {
 
 <style scoped>
 .player-page {
-	min-height: 100vh;
+	height: 100vh;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	padding: 40rpx 30rpx;
 	display: flex;
 	flex-direction: column;
 	color: white;
+	overflow: hidden;
+	box-sizing: border-box;
 }
 
 /* 顶部栏 */
@@ -336,6 +338,8 @@ export default {
 	align-items: center;
 	justify-content: center;
 	padding: 60rpx 0;
+	cursor: pointer;
+	min-height: 0;
 }
 
 .cover-container {
@@ -374,21 +378,23 @@ export default {
 
 /* 歌词区域 */
 .lyrics-section {
-	position: absolute;
-	top: 300rpx;
-	left: 0;
-	right: 0;
-	bottom: 400rpx;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
 	background: rgba(0, 0, 0, 0.3);
 	backdrop-filter: blur(20rpx);
 	border-radius: 30rpx;
-	margin: 0 30rpx;
+	margin: 60rpx 0 30rpx 0;
 	overflow: hidden;
+	cursor: pointer;
+	min-height: 0;
 }
 
 .lyrics-scroll {
-	height: 100%;
+	flex: 1;
+	min-height: 0;
 	padding: 40rpx 0;
+	box-sizing: border-box;
 }
 
 .lyrics-list {
