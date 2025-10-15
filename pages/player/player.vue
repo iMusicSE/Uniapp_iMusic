@@ -103,6 +103,7 @@
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
 import Playlist from '@/components/Playlist.vue'
+import { getLyrics } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -206,20 +207,7 @@ export default {
 			this.currentLyricIndex = 0
 			
 			try {
-				const res = await uni.request({
-					url: 'http://music.163.com/api/song/lyric',
-					method: 'GET',
-					data: {
-						id: songId,
-						lv: -1,
-						kv: -1,
-						tv: -1
-					},
-					header: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						'Referer': 'http://music.163.com/'
-					}
-				})
+				const res = await getLyrics(songId)
 				
 				if (res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {
 					this.parseLyrics(res.data.lrc.lyric)

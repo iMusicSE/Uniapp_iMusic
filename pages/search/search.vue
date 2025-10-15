@@ -103,6 +103,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
+import { searchMusic } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -152,20 +153,7 @@ export default {
 			this.addToHistory(this.keyword)
 			
 			try {
-				const res = await uni.request({
-					url: 'http://music.163.com/api/search/get/web',
-					method: 'GET',
-					data: {
-						s: this.keyword,
-						type: 1,
-						offset: 0,
-						limit: 30
-					},
-					header: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						'Referer': 'http://music.163.com/'
-					}
-				})
+				const res = await searchMusic(this.keyword, 0, 30)
 				
 				if (res.statusCode === 200 && res.data.result) {
 					const songs = res.data.result.songs || []
