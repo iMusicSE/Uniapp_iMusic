@@ -113,6 +113,8 @@
 </template>
 
 <script>
+import { searchMusic, getLyrics } from '@/utils/api.js'
+
 export default {
 	data() {
 		return {
@@ -221,20 +223,17 @@ export default {
 			this.searching = true;
 			
 			try {
-				const res = await uni.request({
-					url: 'http://music.163.com/api/search/get/web',
-					method: 'GET',
-					data: {
-						s: this.keyword,
-						type: 1,
-						offset: 0,
-						limit: 20
-					},
-					header: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						'Referer': 'http://music.163.com/'
-					}
-				});
+				// 使用统一的API方法，支持跨域代理
+				const [error, res] = await searchMusic(this.keyword, 0, 20);
+				
+				if (error) {
+					console.error('搜索错误:', error);
+					uni.showToast({
+						title: '搜索失败，请重试',
+						icon: 'none'
+					});
+					return;
+				}
 				
 				// 检查响应状态
 				if (res.statusCode !== 200) {
@@ -337,20 +336,13 @@ export default {
 			this.currentLyricIndex = 0;
 			
 			try {
-				const res = await uni.request({
-					url: 'http://music.163.com/api/song/lyric',
-					method: 'GET',
-					data: {
-						id: songId,
-						lv: -1,
-						kv: -1,
-						tv: -1
-					},
-					header: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						'Referer': 'http://music.163.com/'
-					}
-				});
+				// 使用统一的API方法，支持跨域代理
+				const [error, res] = await getLyrics(songId);
+				
+				if (error) {
+					console.error('加载歌词错误:', error);
+					return;
+				}
 				
 				// 检查响应并解析歌词
 				if (res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {

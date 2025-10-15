@@ -209,7 +209,13 @@ npm run dev:app
 
 ## 更新日志
 
-**2024-10-15**
+**2025-10-15 v2**
+- ✅ 修复 `pages/discover/discover.vue` 中的 request 调用
+- ✅ 修复 `pages/index/index.vue` 中的 request 调用
+- ✅ 统一所有页面使用 `utils/api.js` 的 API 方法
+- ✅ 解决 "加载新歌失败: {errMsg: "request:fail"}" 错误
+
+**2025-10-15 v1**
 - ✅ 添加H5开发服务器代理配置
 - ✅ 创建统一API配置文件
 - ✅ 更新搜索和播放器页面

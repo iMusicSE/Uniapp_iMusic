@@ -76,6 +76,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
+import { searchMusic } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -104,37 +105,34 @@ export default {
 	},
 	methods: {
 		async loadNewSongs() {
-			// 这里可以调用API获取新歌推荐
-			// 示例数据
+			// 使用统一的API方法，支持跨域代理
 			try {
-				const res = await uni.request({
-					url: 'http://music.163.com/api/search/get/web',
-					method: 'GET',
-					data: {
-						s: '热门',
-						type: 1,
-						offset: 0,
-						limit: 10
-					},
-					header: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						'Referer': 'http://music.163.com/'
-					}
-				})
+				const res = await searchMusic('热门', 0, 10)
 				
-				if (res.statusCode === 200 && res.data.result) {
+				if (res.statusCode === 200 && res.data && res.data.result) {
 					const songs = res.data.result.songs || []
 					this.newSongs = songs.map(song => ({
 						id: song.id,
 						name: song.name,
-						artistName: song.artists.map(artist => artist.name).join(', '),
-						albumName: song.album.name,
-						albumPic: song.album.picUrl || song.album.blurPicUrl || '/static/logo.png',
+						artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
+						albumName: song.album?.name || '未知专辑',
+						albumPic: song.album?.picUrl || song.album?.blurPicUrl || '/static/logo.png',
 						url: `http://music.163.com/song/media/outer/url?id=${song.id}.mp3`
 					}))
+					console.log('成功加载新歌:', this.newSongs.length, '首')
+				} else {
+					console.log('未获取到歌曲数据，响应:', res)
+					uni.showToast({
+						title: '暂无歌曲数据',
+						icon: 'none'
+					})
 				}
 			} catch (error) {
 				console.error('加载新歌失败:', error)
+				uni.showToast({
+					title: '加载失败，请重试',
+					icon: 'none'
+				})
 			}
 		},
 		
