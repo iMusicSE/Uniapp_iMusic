@@ -136,32 +136,61 @@ export default {
 		// 创建音频上下文
 		this.innerAudioContext = uni.createInnerAudioContext();
 		
+		// 监听音频可以播放时（加载成功）
+		this.innerAudioContext.onCanplay(() => {
+			console.log('音频加载成功，可以播放');
+			uni.hideLoading();
+		});
+		
 		// 监听音频播放事件
 		this.innerAudioContext.onPlay(() => {
+			console.log('音频开始播放');
 			this.isPlaying = true;
 			this.startProgressTimer();
+			uni.hideLoading();
 		});
 		
 		this.innerAudioContext.onPause(() => {
+			console.log('音频暂停');
 			this.isPlaying = false;
 			this.stopProgressTimer();
 		});
 		
 		this.innerAudioContext.onEnded(() => {
+			console.log('音频播放结束');
 			this.isPlaying = false;
 			this.stopProgressTimer();
 			// 自动播放下一首
 			this.nextSong();
 		});
 		
+		// 监听音频等待加载
+		this.innerAudioContext.onWaiting(() => {
+			console.log('音频加载中...');
+		});
+		
 		this.innerAudioContext.onError((res) => {
 			console.error('音频播放错误:', res);
+			console.error('错误详情:', {
+				errMsg: res ? res.errMsg : 'undefined',
+				errCode: res ? res.errCode : 'undefined',
+				songUrl: this.innerAudioContext ? this.innerAudioContext.src : 'no url',
+				currentSong: this.currentSong
+			});
 			uni.showToast({
-				title: '播放失败，可能需要VIP',
-				icon: 'none'
+				title: '播放失败：' + (res && res.errMsg ? res.errMsg : '资源不可用'),
+				icon: 'none',
+				duration: 3000
 			});
 			this.isPlaying = false;
 			this.stopProgressTimer();
+			
+			// 尝试播放下一首
+			setTimeout(() => {
+				if (this.searchResults.length > 1) {
+					this.nextSong();
+				}
+			}, 2000);
 		});
 		
 		this.innerAudioContext.onTimeUpdate(() => {
@@ -228,7 +257,8 @@ export default {
 						artistName: song.artists.map(artist => artist.name).join(', '),
 						albumName: song.album.name,
 						albumPic: song.album.picUrl || song.album.blurPicUrl || '/static/logo.png',
-						url: `http://music.163.com/song/media/outer/url?id=${song.id}.mp3`
+						// 使用HTTPS协议
+						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
 					}));
 					
 					if (this.searchResults.length === 0) {
@@ -255,15 +285,49 @@ export default {
 		},
 		
 		// 播放歌曲
-		playSong(song, index) {
-			this.currentSong = song;
-			this.currentSongIndex = index;
-			this.innerAudioContext.src = song.url;
-			this.innerAudioContext.title = song.name;
-			this.innerAudioContext.play();
-			
-			// 加载歌词
-			this.loadLyrics(song.id);
+		async playSong(song, index) {
+			try {
+				this.currentSong = song;
+				this.currentSongIndex = index;
+				
+				console.log('准备播放歌曲:', {
+					name: song.name,
+					id: song.id,
+					url: song.url
+				});
+				
+				// 先停止当前播放
+				if (this.innerAudioContext) {
+					this.innerAudioContext.stop();
+				}
+				
+				// 设置音频源
+				this.innerAudioContext.src = song.url;
+				this.innerAudioContext.title = song.name;
+				
+				// 尝试播放
+				this.innerAudioContext.play();
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '加载中...',
+					mask: true
+				});
+				
+				// 2秒后隐藏加载提示
+				setTimeout(() => {
+					uni.hideLoading();
+				}, 2000);
+				
+				// 加载歌词
+				this.loadLyrics(song.id);
+			} catch (error) {
+				console.error('播放歌曲异常:', error);
+				uni.showToast({
+					title: '播放失败',
+					icon: 'none'
+				});
+			}
 		},
 		
 		// 加载歌词
