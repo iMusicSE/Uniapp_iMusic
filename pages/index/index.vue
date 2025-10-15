@@ -224,20 +224,11 @@ export default {
 			
 			try {
 				// 使用统一的API方法，支持跨域代理
-				const [error, res] = await searchMusic(this.keyword, 0, 20);
-				
-				if (error) {
-					console.error('搜索错误:', error);
-					uni.showToast({
-						title: '搜索失败，请重试',
-						icon: 'none'
-					});
-					return;
-				}
+				const res = await searchMusic(this.keyword, 0, 20);
 				
 				// 检查响应状态
-				if (res.statusCode !== 200) {
-					console.error('搜索错误: 状态码', res.statusCode);
+				if (!res || res.statusCode !== 200) {
+					console.error('搜索错误: 状态码', res?.statusCode);
 					uni.showToast({
 						title: '搜索失败，请重试',
 						icon: 'none'
@@ -337,15 +328,10 @@ export default {
 			
 			try {
 				// 使用统一的API方法，支持跨域代理
-				const [error, res] = await getLyrics(songId);
-				
-				if (error) {
-					console.error('加载歌词错误:', error);
-					return;
-				}
+				const res = await getLyrics(songId);
 				
 				// 检查响应并解析歌词
-				if (res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {
+				if (res && res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {
 					this.parseLyrics(res.data.lrc.lyric);
 				}
 			} catch (error) {
