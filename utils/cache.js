@@ -19,6 +19,11 @@ const CACHE_CONFIG = {
 	RANK_LIST: {
 		prefix: 'rank_list_',
 		expire: 60 * 60 * 1000 // 1小时
+	},
+	// 歌单详情缓存：3天
+	PLAYLIST_DETAIL: {
+		prefix: 'playlist_detail_',
+		expire: 3 * 24 * 60 * 60 * 1000 // 3天（毫秒）
 	}
 }
 
@@ -156,6 +161,7 @@ class CacheManager {
 			let songDetailCount = 0
 			let searchResultCount = 0
 			let rankListCount = 0
+			let playlistDetailCount = 0
 			let otherCount = 0
 			
 			keys.forEach(key => {
@@ -165,6 +171,8 @@ class CacheManager {
 					searchResultCount++
 				} else if (key.startsWith(CACHE_CONFIG.RANK_LIST.prefix)) {
 					rankListCount++
+				} else if (key.startsWith(CACHE_CONFIG.PLAYLIST_DETAIL.prefix)) {
+					playlistDetailCount++
 				} else {
 					otherCount++
 				}
@@ -177,6 +185,7 @@ class CacheManager {
 				songDetailCount,
 				searchResultCount,
 				rankListCount,
+				playlistDetailCount,
 				otherCount
 			}
 		} catch (error) {
@@ -309,6 +318,47 @@ export const RankListCache = {
 	}
 }
 
+/**
+ * 歌单详情缓存
+ */
+export const PlaylistDetailCache = {
+	/**
+	 * 保存歌单详情
+	 * @param {number|string} playlistId - 歌单ID
+	 * @param {object} playlistDetail - 歌单详情
+	 */
+	set(playlistId, playlistDetail) {
+		const key = CACHE_CONFIG.PLAYLIST_DETAIL.prefix + playlistId
+		return CacheManager.set(key, playlistDetail, CACHE_CONFIG.PLAYLIST_DETAIL.expire)
+	},
+	
+	/**
+	 * 获取歌单详情
+	 * @param {number|string} playlistId - 歌单ID
+	 * @returns {object|null} 歌单详情
+	 */
+	get(playlistId) {
+		const key = CACHE_CONFIG.PLAYLIST_DETAIL.prefix + playlistId
+		return CacheManager.get(key)
+	},
+	
+	/**
+	 * 删除歌单详情
+	 * @param {number|string} playlistId - 歌单ID
+	 */
+	remove(playlistId) {
+		const key = CACHE_CONFIG.PLAYLIST_DETAIL.prefix + playlistId
+		return CacheManager.remove(key)
+	},
+	
+	/**
+	 * 清空所有歌单详情缓存
+	 */
+	clear() {
+		return CacheManager.clearByPrefix(CACHE_CONFIG.PLAYLIST_DETAIL.prefix)
+	}
+}
+
 // 导出缓存管理器
 export { CacheManager, CACHE_CONFIG }
 
@@ -318,6 +368,7 @@ export default {
 	SongDetailCache,
 	SearchResultCache,
 	RankListCache,
+	PlaylistDetailCache,
 	CACHE_CONFIG
 }
 

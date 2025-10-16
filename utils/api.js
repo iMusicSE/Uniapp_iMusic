@@ -75,34 +75,91 @@ export function getPlaylistDetail(playlistId) {
 	})
 }
 
-// 批量获取歌单详情
+// 批量获取歌单详情（带缓存和重试机制）
 export async function getBatchPlaylistDetails(playlistIds) {
 	if (!playlistIds || playlistIds.length === 0) return []
 	
-	try {
-		const requests = playlistIds.map(id => getPlaylistDetail(id))
-		const responses = await Promise.all(requests)
-		
-		const playlists = []
-		responses.forEach(res => {
-			if (res.statusCode === 200 && res.data?.result) {
-				const playlist = res.data.result
-				playlists.push({
-					id: playlist.id,
-					name: playlist.name,
-					cover: playlist.coverImgUrl || '/static/logo.png',
-					playCount: playlist.playCount || 0,
-					description: playlist.description || '',
-					tracks: playlist.tracks || []
-				})
-			}
-		})
-		
-		return playlists
-	} catch (error) {
-		console.error('批量获取歌单失败:', error)
-		return []
+	// 导入缓存模块
+	const { PlaylistDetailCache } = await import('./cache.js')
+	
+	const playlists = []
+	const failedIds = [] // 记录失败的ID
+	const RETRY_DELAY = 2000 // 2秒重试延迟
+	
+	// 第一步：先从缓存中加载
+	for (const id of playlistIds) {
+		const cached = PlaylistDetailCache.get(id)
+		if (cached) {
+			playlists.push(cached)
+			console.log(`歌单 ${id} 从缓存加载`)
+		} else {
+			failedIds.push(id)
+		}
 	}
+	
+	// 第二步：加载未缓存的歌单
+	if (failedIds.length > 0) {
+		console.log(`需要从网络加载的歌单：${failedIds.length} 个`)
+		
+		// 单个歌单请求函数
+		const fetchPlaylist = async (id) => {
+			try {
+				const res = await getPlaylistDetail(id)
+				
+				if (res.statusCode === 200 && res.data?.result) {
+					const playlist = res.data.result
+					const playlistData = {
+						id: playlist.id,
+						name: playlist.name,
+						cover: playlist.coverImgUrl || '/static/logo.png',
+						playCount: playlist.playCount || 0,
+						description: playlist.description || '',
+						tracks: playlist.tracks || []
+					}
+					
+					// 保存到缓存
+					PlaylistDetailCache.set(id, playlistData)
+					playlists.push(playlistData)
+					console.log(`歌单 ${id} 加载成功并已缓存`)
+					return { success: true, id }
+				}
+				
+				return { success: false, id }
+			} catch (error) {
+				console.error(`歌单 ${id} 加载失败:`, error)
+				return { success: false, id }
+			}
+		}
+		
+		// 首次尝试加载所有失败的歌单
+		const results = await Promise.all(failedIds.map(id => fetchPlaylist(id)))
+		
+		// 第三步：对仍然失败的歌单进行重试（间隔2秒）
+		const stillFailedIds = results.filter(r => !r.success).map(r => r.id)
+		
+		if (stillFailedIds.length > 0) {
+			console.log(`${stillFailedIds.length} 个歌单加载失败，将在 2 秒后重试`)
+			
+			// 延迟2秒后重试
+			await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+			
+			console.log('开始重试失败的歌单...')
+			const retryResults = await Promise.all(stillFailedIds.map(id => fetchPlaylist(id)))
+			
+			// 统计最终结果
+			const finalFailedIds = retryResults.filter(r => !r.success).map(r => r.id)
+			if (finalFailedIds.length > 0) {
+				console.warn(`以下歌单最终加载失败: ${finalFailedIds.join(', ')}`)
+			}
+		}
+	}
+	
+	// 按原始ID顺序返回（保持UI展示顺序一致）
+	const orderedPlaylists = playlistIds
+		.map(id => playlists.find(p => p.id === id))
+		.filter(p => p !== undefined)
+	
+	return orderedPlaylists
 }
 
 // 批量获取歌曲详情（优化版：并行请求 + 重试机制）

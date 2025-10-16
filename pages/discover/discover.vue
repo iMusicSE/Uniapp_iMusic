@@ -106,11 +106,30 @@ export default {
 		async loadPlaylists() {
 			try {
 				console.log('开始加载推荐歌单...')
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '加载中...',
+					mask: true
+				})
+				
 				const playlists = await getBatchPlaylistDetails(this.playlistIds)
+				
+				// 隐藏加载提示
+				uni.hideLoading()
 				
 				if (playlists && playlists.length > 0) {
 					this.playlists = playlists
 					console.log('成功加载推荐歌单:', playlists.length, '个')
+					
+					// 显示加载结果提示
+					if (playlists.length < this.playlistIds.length) {
+						uni.showToast({
+							title: `加载了 ${playlists.length}/${this.playlistIds.length} 个歌单`,
+							icon: 'none',
+							duration: 2000
+						})
+					}
 				} else {
 					console.log('未获取到歌单数据')
 					uni.showToast({
@@ -120,6 +139,7 @@ export default {
 				}
 			} catch (error) {
 				console.error('加载歌单失败:', error)
+				uni.hideLoading()
 				uni.showToast({
 					title: '加载失败，请重试',
 					icon: 'none'
