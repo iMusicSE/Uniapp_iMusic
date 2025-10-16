@@ -17,220 +17,159 @@ const store = new Vuex.Store({
 const store = createStore({
 // #endif
 	state: {
-		// 音频上下文
+		userId: null, // 当前登录用户ID
 		audioContext: null,
-		// 当前播放歌曲
 		currentSong: null,
-		// 播放状态
 		isPlaying: false,
-		// 播放列表
 		playlist: [],
-		// 当前播放索引
 		currentIndex: 0,
-		// 播放模式: 0-列表循环 1-单曲循环 2-随机播放
 		playMode: 0,
-		// 播放时间
 		currentTime: 0,
 		duration: 0,
-		// 收藏列表
 		favorites: [],
-		// 播放历史
 		history: []
 	},
-	
+
 	getters: {
-		// 获取当前歌曲
 		getCurrentSong: state => state.currentSong,
-		// 获取播放状态
 		getPlayState: state => state.isPlaying,
-		// 获取播放列表
 		getPlaylist: state => state.playlist,
-		// 获取收藏列表
 		getFavorites: state => state.favorites,
-		// 获取播放历史
 		getHistory: state => state.history,
-		// 检查是否已收藏
 		isFavorite: state => songId => {
-			return state.favorites.some(song => song.id === songId)
+		    return state.favorites.some(song => Number(song.id) === Number(songId))
 		}
 	},
-	
+
 	mutations: {
-		// 设置音频上下文
 		SET_AUDIO_CONTEXT(state, context) {
 			state.audioContext = context
 		},
-		
-		// 设置当前歌曲
 		SET_CURRENT_SONG(state, song) {
 			state.currentSong = song
 		},
-		
-		// 设置播放状态
 		SET_PLAY_STATE(state, isPlaying) {
 			state.isPlaying = isPlaying
 		},
-		
-		// 设置播放列表
 		SET_PLAYLIST(state, playlist) {
 			state.playlist = playlist
 		},
-		
-		// 设置当前播放索引
 		SET_CURRENT_INDEX(state, index) {
 			state.currentIndex = index
 		},
-		
-		// 设置播放模式
 		SET_PLAY_MODE(state, mode) {
 			state.playMode = mode
 		},
-		
-		// 设置播放时间
 		SET_CURRENT_TIME(state, time) {
 			state.currentTime = time
 		},
-		
-		// 设置总时长
 		SET_DURATION(state, duration) {
 			state.duration = duration
 		},
-		
-		// 添加到收藏
+		SET_USER_ID(state, userId) {
+			state.userId = userId
+		},
+
+		// 添加收藏
 		ADD_FAVORITE(state, song) {
 			if (!state.favorites.some(item => item.id === song.id)) {
 				state.favorites.unshift(song)
-				// 保存到本地存储
 				uni.setStorageSync('favorites', state.favorites)
 			}
 		},
-		
-		// 从收藏移除
+		// 移除收藏
 		REMOVE_FAVORITE(state, songId) {
 			state.favorites = state.favorites.filter(song => song.id !== songId)
 			uni.setStorageSync('favorites', state.favorites)
 		},
-		
-		// 添加到历史记录
+		// 清空收藏
+		CLEAR_FAVORITES(state) {
+			state.favorites = []
+			uni.removeStorageSync('favorites')
+		},
+
+		// 添加播放历史
 		ADD_HISTORY(state, song) {
-			// 移除已存在的记录
 			state.history = state.history.filter(item => item.id !== song.id)
-			// 添加到开头
 			state.history.unshift(song)
-			// 限制历史记录数量
-			if (state.history.length > 100) {
-				state.history = state.history.slice(0, 100)
-			}
-			// 保存到本地存储
+			if (state.history.length > 100) state.history = state.history.slice(0, 100)
 			uni.setStorageSync('history', state.history)
 		},
-		
-		// 清空历史记录
+		// 清空播放历史
 		CLEAR_HISTORY(state) {
 			state.history = []
 			uni.removeStorageSync('history')
 		},
-		
-		// 从本地存储加载数据
+
 		LOAD_LOCAL_DATA(state) {
 			const favorites = uni.getStorageSync('favorites')
 			const history = uni.getStorageSync('history')
-			if (favorites) {
-				state.favorites = favorites
-			}
-			if (history) {
-				state.history = history
-			}
+			if (favorites) state.favorites = favorites
+			if (history) state.history = history
 		},
-		
-		// 设置收藏列表（用于清空）
 		SET_FAVORITES(state, favorites) {
 			state.favorites = favorites
 		},
-		
-		// 从播放列表移除歌曲
 		REMOVE_FROM_PLAYLIST(state, index) {
 			state.playlist.splice(index, 1)
-			// 如果移除的是当前播放的歌曲之前的歌曲，需要调整索引
 			if (index < state.currentIndex) {
 				state.currentIndex--
-			}
-			// 如果移除的正好是当前播放的歌曲
-			else if (index === state.currentIndex) {
-				// 如果还有歌曲，保持索引不变（会自动切到下一首）
-				// 如果索引超出范围，调整为最后一首
+			} else if (index === state.currentIndex) {
 				if (state.currentIndex >= state.playlist.length) {
 					state.currentIndex = state.playlist.length - 1
 				}
 			}
 		},
-		
-		// 清空播放列表
 		CLEAR_PLAYLIST(state) {
 			state.playlist = []
 			state.currentIndex = 0
 		},
-		
-		// 添加歌曲到播放列表（不立即播放）
 		ADD_TO_PLAYLIST(state, song) {
-			// 检查是否已存在
 			const exists = state.playlist.some(item => item.id === song.id)
 			if (!exists) {
 				state.playlist.push(song)
 			}
 		},
-		
-		// 插入到播放列表（当前歌曲后面）
 		INSERT_TO_PLAYLIST(state, song) {
-			// 检查是否已存在
 			const existIndex = state.playlist.findIndex(item => item.id === song.id)
 			if (existIndex >= 0) {
-				// 如果已存在，先移除
 				state.playlist.splice(existIndex, 1)
-				// 调整当前索引
 				if (existIndex <= state.currentIndex) {
 					state.currentIndex--
 				}
 			}
-			// 插入到当前播放位置的下一首
 			const insertIndex = state.currentIndex + 1
 			state.playlist.splice(insertIndex, 0, song)
 		}
 	},
-	
+
 	actions: {
-		// 初始化音频上下文
+		// ------------------ 🎵 播放控制 ------------------
 		initAudioContext({ commit, state }) {
 			if (!state.audioContext) {
 				const audioContext = uni.createInnerAudioContext()
 				commit('SET_AUDIO_CONTEXT', audioContext)
 			}
 		},
-		
-		// 播放歌曲
-		playSong({ commit, state }, { song, playlist }) {
-			// 设置当前歌曲
+
+		playSong({ commit, state, dispatch }, { song, playlist }) {
 			commit('SET_CURRENT_SONG', song)
-			
-			// 如果提供了播放列表，更新播放列表
 			if (playlist && playlist.length > 0) {
 				commit('SET_PLAYLIST', playlist)
 				const index = playlist.findIndex(item => item.id === song.id)
 				commit('SET_CURRENT_INDEX', index >= 0 ? index : 0)
 			}
-			
-			// 添加到历史记录
+
 			commit('ADD_HISTORY', song)
-			
-			// 播放音乐
+			dispatch('syncHistory', song)
+
 			if (state.audioContext) {
 				state.audioContext.src = song.url
 				state.audioContext.play()
 				commit('SET_PLAY_STATE', true)
 			}
 		},
-		
-		// 暂停/继续
+
 		togglePlay({ commit, state }) {
 			if (state.audioContext) {
 				if (state.isPlaying) {
@@ -242,152 +181,163 @@ const store = createStore({
 				}
 			}
 		},
-		
-		// 上一首
+
 		playPrevious({ commit, state, dispatch }) {
 			if (state.playlist.length === 0) return
-			
 			let newIndex = state.currentIndex - 1
-			if (newIndex < 0) {
-				newIndex = state.playlist.length - 1
-			}
-			
+			if (newIndex < 0) newIndex = state.playlist.length - 1
 			commit('SET_CURRENT_INDEX', newIndex)
-			const song = state.playlist[newIndex]
-			dispatch('playSong', { song })
+			dispatch('playSong', { song: state.playlist[newIndex] })
 		},
-		
-		// 下一首
+
 		playNext({ commit, state, dispatch }) {
 			if (state.playlist.length === 0) return
-			
 			let newIndex
-			
-			// 根据播放模式决定下一首
 			if (state.playMode === 2) {
-				// 随机播放
 				newIndex = Math.floor(Math.random() * state.playlist.length)
 			} else {
-				// 列表循环或单曲循环
 				newIndex = state.currentIndex + 1
-				if (newIndex >= state.playlist.length) {
-					newIndex = 0
-				}
+				if (newIndex >= state.playlist.length) newIndex = 0
 			}
-			
 			commit('SET_CURRENT_INDEX', newIndex)
-			const song = state.playlist[newIndex]
-			dispatch('playSong', { song })
+			dispatch('playSong', { song: state.playlist[newIndex] })
 		},
-		
-		// 切换播放模式
+
 		togglePlayMode({ commit, state }) {
 			const newMode = (state.playMode + 1) % 3
 			commit('SET_PLAY_MODE', newMode)
-			
 			const modeText = ['列表循环', '单曲循环', '随机播放']
-			uni.showToast({
-				title: modeText[newMode],
-				icon: 'none',
-				duration: 1500
-			})
+			uni.showToast({ title: modeText[newMode], icon: 'none', duration: 1500 })
 		},
-		
-		// 切换收藏状态
-		toggleFavorite({ commit, state, getters }, song) {
-			if (getters.isFavorite(song.id)) {
-				commit('REMOVE_FAVORITE', song.id)
-				uni.showToast({
-					title: '已取消收藏',
-					icon: 'none'
+
+		// ------------------ ❤️ 收藏功能 + 同步数据库 ------------------
+		async syncFavorite({ state }, song) {
+			if (!state.userId) return
+			try {
+				await uni.request({
+					url: 'http://localhost:3000/favorites/add',
+					method: 'POST',
+					data: { userId: state.userId, musicId: song.id }
 				})
-			} else {
-				commit('ADD_FAVORITE', song)
-				uni.showToast({
-					title: '已添加到收藏',
-					icon: 'success'
-				})
+			} catch (err) {
+				console.error('同步收藏失败', err)
 			}
 		},
-		
-		// 加载本地数据
+
+		async removeFavoriteDB({ state }, songId) {
+			if (!state.userId) return
+			try {
+				await uni.request({
+					url: 'http://localhost:3000/favorites/delete',
+					method: 'POST',
+					data: { userId: state.userId, musicId: songId }
+				})
+			} catch (err) {
+				console.error('同步取消收藏失败', err)
+			}
+		},
+
+		async clearFavorites({ commit, state }) {
+			commit('CLEAR_FAVORITES')
+			if (!state.userId) return
+			try {
+				await uni.request({
+					url: 'http://localhost:3000/favorites/clear',
+					method: 'POST',
+					data: { userId: state.userId }
+				})
+				uni.showToast({ title: '已清空收藏', icon: 'success' })
+			} catch (err) {
+				console.error('清空收藏失败', err)
+				uni.showToast({ title: '清空收藏失败', icon: 'none' })
+			}
+		},
+
+		toggleFavorite({ commit, state, getters, dispatch }, song) {
+			if (getters.isFavorite(song.id)) {
+				commit('REMOVE_FAVORITE', song.id)
+				dispatch('removeFavoriteDB', song.id)
+				uni.showToast({ title: '已取消收藏', icon: 'none' })
+			} else {
+				commit('ADD_FAVORITE', song)
+				dispatch('syncFavorite', song)
+				uni.showToast({ title: '已添加到收藏', icon: 'success' })
+			}
+		},
+
+		// ------------------ 🕒 播放历史 + 同步数据库 ------------------
+		async syncHistory({ state }, song) {
+			if (!state.userId) return
+			try {
+				await uni.request({
+					url: 'http://localhost:3000/history/add',
+					method: 'POST',
+					data: { userId: state.userId, musicId: song.id }
+				})
+			} catch (err) {
+				console.error('同步历史失败', err)
+			}
+		},
+
+		async clearHistory({ commit, state }) {
+			commit('CLEAR_HISTORY')
+			if (!state.userId) return
+			try {
+				await uni.request({
+					url: 'http://localhost:3000/history/clear',
+					method: 'POST',
+					data: { userId: state.userId }
+				})
+				uni.showToast({ title: '已清空播放历史', icon: 'success' })
+			} catch (err) {
+				console.error('清空历史失败', err)
+				uni.showToast({ title: '清空历史失败', icon: 'none' })
+			}
+		},
+
+		// ------------------ ⚙️ 其他 ------------------
 		loadLocalData({ commit }) {
 			commit('LOAD_LOCAL_DATA')
 		},
-		
-		// 从播放列表移除歌曲
+
 		removeFromPlaylist({ commit, state, dispatch }, index) {
 			if (index < 0 || index >= state.playlist.length) return
-			
 			const isCurrentSong = index === state.currentIndex
-			const wasPlaying = state.isPlaying
-			
 			commit('REMOVE_FROM_PLAYLIST', index)
-			
-			// 如果移除的是当前播放的歌曲，且还有歌曲
 			if (isCurrentSong && state.playlist.length > 0) {
-				const song = state.playlist[state.currentIndex]
-				if (song) {
-					dispatch('playSong', { song })
-				}
-			}
-			// 如果播放列表空了
-			else if (state.playlist.length === 0) {
+				dispatch('playSong', { song: state.playlist[state.currentIndex] })
+			} else if (state.playlist.length === 0) {
 				commit('SET_CURRENT_SONG', null)
 				commit('SET_PLAY_STATE', false)
-				if (state.audioContext) {
-					state.audioContext.stop()
-				}
+				if (state.audioContext) state.audioContext.stop()
 			}
-			
-			uni.showToast({
-				title: '已从播放列表移除',
-				icon: 'none'
-			})
+			uni.showToast({ title: '已从播放列表移除', icon: 'none' })
 		},
-		
-		// 清空播放列表
+
 		clearPlaylist({ commit, state }) {
 			commit('CLEAR_PLAYLIST')
 			commit('SET_CURRENT_SONG', null)
 			commit('SET_PLAY_STATE', false)
-			
-			if (state.audioContext) {
-				state.audioContext.stop()
-			}
-			
-			uni.showToast({
-				title: '已清空播放列表',
-				icon: 'success'
-			})
+			if (state.audioContext) state.audioContext.stop()
+			uni.showToast({ title: '已清空播放列表', icon: 'success' })
 		},
-		
-		// 添加到播放列表（不立即播放）
+
 		addToPlaylist({ commit }, song) {
 			commit('ADD_TO_PLAYLIST', song)
-			uni.showToast({
-				title: '已添加到播放列表',
-				icon: 'success'
-			})
+			uni.showToast({ title: '已添加到播放列表', icon: 'success' })
 		},
-		
-		// 插入到播放列表（下一首播放）
+
 		insertToPlaylist({ commit, state }, song) {
 			if (state.playlist.length === 0) {
-				// 如果播放列表为空，直接添加并播放
 				commit('SET_PLAYLIST', [song])
 				commit('SET_CURRENT_INDEX', 0)
 				commit('SET_CURRENT_SONG', song)
 			} else {
 				commit('INSERT_TO_PLAYLIST', song)
 			}
-			uni.showToast({
-				title: '将在下一首播放',
-				icon: 'success'
-			})
+			uni.showToast({ title: '将在下一首播放', icon: 'success' })
 		}
 	}
 })
 
 export default store
-
