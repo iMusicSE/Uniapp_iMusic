@@ -38,6 +38,15 @@
 			}
 		},
 		{
+			"path": "pages/rank/rank",
+			"style": {
+				"navigationBarTitleText": "排行榜",
+				"navigationBarBackgroundColor": "#667eea",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 		      "path": "pages/login/login",
 		      "style": {
 		        "navigationBarTitleText": "登录"

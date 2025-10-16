@@ -170,12 +170,11 @@ export default {
 			})
 		},
 		
-		goToRank() {
-			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
-			})
-		},
+	goToRank() {
+		uni.navigateTo({
+			url: '/pages/rank/rank'
+		})
+	},
 		
 		goToRadio() {
 			uni.showToast({
