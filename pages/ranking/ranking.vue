@@ -43,9 +43,6 @@
 							</view>
 						</view>
 					</view>
-					<view class="ranking-badge" :style="{ background: getBadgeColor(index) }">
-						<text class="badge-text">TOP</text>
-					</view>
 				</view>
 			</view>
 		</view>
@@ -89,6 +86,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import { getPlaylistDetail } from '@/utils/api.js'
+import { RankListCache } from '@/utils/cache.js'
 
 export default {
 	components: {
@@ -212,16 +210,24 @@ export default {
 			}
 		},
 		
-		// 加载单个榜单详情
+		// 加载单个榜单详情（带缓存）
 		async loadRankingDetail(id) {
 			try {
+				// 先尝试从缓存获取
+				const cached = RankListCache.get(id)
+				if (cached) {
+					console.log(`榜单 ${id} 从缓存加载`)
+					return cached
+				}
+				
+				// 缓存未命中，从网络获取
 				const res = await getPlaylistDetail(id)
 				
 				if (res.statusCode === 200 && res.data?.result) {
 					const playlist = res.data.result
 					const tracks = playlist.tracks || []
 					
-					return {
+					const data = {
 						cover: playlist.coverImgUrl || '/static/logo.png',
 						playCount: playlist.playCount || 0,
 						topSongs: tracks.slice(0, 3).map(track => ({
@@ -229,6 +235,12 @@ export default {
 							artist: track.artists?.map(a => a.name).join(', ') || '未知歌手'
 						}))
 					}
+					
+					// 保存到缓存（1小时过期）
+					RankListCache.set(id, data)
+					console.log(`榜单 ${id} 已缓存`)
+					
+					return data
 				}
 				return null
 			} catch (error) {
@@ -245,17 +257,6 @@ export default {
 				return (count / 10000).toFixed(1) + '万'
 			}
 			return count
-		},
-		
-		// 获取徽章颜色
-		getBadgeColor(index) {
-			const colors = [
-				'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-				'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-				'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-				'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-			]
-			return colors[index % colors.length]
 		},
 		
 		// 跳转到榜单详情
@@ -410,21 +411,6 @@ export default {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	flex: 1;
-}
-
-.ranking-badge {
-	position: absolute;
-	top: 20rpx;
-	right: 20rpx;
-	padding: 8rpx 20rpx;
-	border-radius: 30rpx;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
-}
-
-.badge-text {
-	font-size: 20rpx;
-	font-weight: bold;
-	color: white;
 }
 
 /* 特色榜单网格 */
