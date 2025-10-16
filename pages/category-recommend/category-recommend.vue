@@ -2,8 +2,8 @@
 	<view class="category-recommend-page">
 		<!-- 页面标题 -->
 		<view class="page-header">
-			<text class="header-title">分类推荐</text>
-			<text class="header-subtitle">发现不同风格的音乐</text>
+			<text class="header-title">音乐风格</text>
+			<text class="header-subtitle">探索不同类型的音乐世界</text>
 		</view>
 		
 		<!-- 分类推荐列表 -->
@@ -22,7 +22,9 @@
 					<view class="category-info">
 						<text class="category-name">{{ category.name }}</text>
 						<text class="category-desc">{{ category.desc }}</text>
-						<text class="update-time">{{ category.updateTime }}</text>
+						<view class="category-tags">
+							<text class="tag" v-for="(tag, idx) in category.tags" :key="idx">{{ tag }}</text>
+						</view>
 					</view>
 					<view class="category-arrow">
 						<text class="arrow">{{ category.expanded ? '▲' : '▼' }}</text>
@@ -76,51 +78,38 @@ export default {
 			categoryList: [
 				{
 					id: 1,
-					name: '🔥 华语热歌榜',
-					desc: '最热门的华语流行音乐',
+					name: '流行音乐',
+					desc: '主流流行歌曲，旋律动听易记',
 					icon: '🎵',
 					gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%)',
-					keyword: '华语热歌',
-					updateTime: '每日更新',
+					keyword: '流行',
+					tags: ['Pop', '流行', '热门'],
 					expanded: false,
 					loading: false,
 					songs: [],
-					preview: ['告白气球', '晴天', '七里香']
+					preview: []
 				},
 				{
 					id: 2,
-					name: '🌍 欧美流行榜',
-					desc: '全球最火的欧美金曲',
+					name: '摇滚音乐',
+					desc: '激情澎湃，释放能量',
 					icon: '🎸',
 					gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-					keyword: '欧美流行',
-					updateTime: '每周更新',
+					keyword: '摇滚',
+					tags: ['Rock', '摇滚', '硬核'],
 					expanded: false,
 					loading: false,
 					songs: [],
-					preview: ['Shape of You', 'Blinding Lights', 'Someone Like You']
+					preview: []
 				},
 				{
 					id: 3,
-					name: '🇯🇵 日韩精选榜',
-					desc: '人气日韩音乐排行',
-					icon: '🎤',
+					name: '电子音乐',
+					desc: '律动节奏，舞动青春',
+					icon: '⚡',
 					gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-					keyword: '日韩',
-					updateTime: '每周更新',
-					expanded: false,
-					loading: false,
-					songs: [],
-					preview: ['Lemon', '前前前世', 'Dynamite']
-				},
-				{
-					id: 4,
-					name: '🆕 新歌榜',
-					desc: '最新发布的热门单曲',
-					icon: '✨',
-					gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-					keyword: '新歌',
-					updateTime: '每日更新',
+					keyword: '电子',
+					tags: ['Electronic', 'EDM', 'DJ'],
 					expanded: false,
 					loading: false,
 					songs: [],
@@ -128,12 +117,12 @@ export default {
 				},
 				{
 					id: 5,
-					name: '🎹 抖音热歌榜',
-					desc: '抖音最火的BGM',
-					icon: '🎶',
+					name: '民谣音乐',
+					desc: '质朴真诚，触动心灵',
+					icon: '🎻',
 					gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-					keyword: '抖音热歌',
-					updateTime: '实时更新',
+					keyword: '民谣',
+					tags: ['Folk', '民谣', '吉他'],
 					expanded: false,
 					loading: false,
 					songs: [],
@@ -141,25 +130,25 @@ export default {
 				},
 				{
 					id: 6,
-					name: '🎼 经典老歌榜',
-					desc: '经典永流传',
-					icon: '📻',
+					name: '爵士音乐',
+					desc: '优雅迷人，复古情调',
+					icon: '🎺',
 					gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-					keyword: '经典老歌',
-					updateTime: '每月更新',
+					keyword: '爵士',
+					tags: ['Jazz', '爵士', '蓝调'],
 					expanded: false,
 					loading: false,
 					songs: [],
-					preview: ['月亮代表我的心', '甜蜜蜜', '童话']
+					preview: []
 				},
 				{
 					id: 7,
-					name: '🎧 电音榜',
-					desc: '动感节奏，燃爆全场',
-					icon: '⚡',
+					name: 'R&B/Soul',
+					desc: '节奏布鲁斯，灵魂乐',
+					icon: '🎹',
 					gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
-					keyword: '电音',
-					updateTime: '每周更新',
+					keyword: 'R&B',
+					tags: ['R&B', 'Soul', '灵魂乐'],
 					expanded: false,
 					loading: false,
 					songs: [],
@@ -167,12 +156,38 @@ export default {
 				},
 				{
 					id: 8,
-					name: '🌙 轻音乐榜',
-					desc: '放松心情，舒缓压力',
-					icon: '🎹',
+					name: '轻音乐',
+					desc: '舒缓放松，陶冶心情',
+					icon: '🌙',
 					gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
 					keyword: '轻音乐',
-					updateTime: '每周更新',
+					tags: ['Light', '轻音乐', '纯音乐'],
+					expanded: false,
+					loading: false,
+					songs: [],
+					preview: []
+				},
+				{
+					id: 9,
+					name: '古典音乐',
+					desc: '高雅艺术，永恒经典',
+					icon: '🎼',
+					gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+					keyword: '古典',
+					tags: ['Classical', '古典', '交响乐'],
+					expanded: false,
+					loading: false,
+					songs: [],
+					preview: []
+				},
+				{
+					id: 12,
+					name: '金属音乐',
+					desc: '重型音墙，极致力量',
+					icon: '🤘',
+					gradient: 'linear-gradient(135deg, #434343 0%, #000000 100%)',
+					keyword: '金属',
+					tags: ['Metal', '金属', '重金属'],
 					expanded: false,
 					loading: false,
 					songs: [],
@@ -352,12 +367,21 @@ export default {
 .category-desc {
 	font-size: 24rpx;
 	color: #999;
+	margin-bottom: 10rpx;
 }
 
-.update-time {
-	font-size: 22rpx;
-	color: #ccc;
-	margin-top: 5rpx;
+.category-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10rpx;
+}
+
+.tag {
+	font-size: 20rpx;
+	color: #667eea;
+	background: #f0f3ff;
+	padding: 4rpx 12rpx;
+	border-radius: 8rpx;
 }
 
 .category-arrow {
