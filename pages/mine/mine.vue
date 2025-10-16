@@ -183,6 +183,22 @@ export default {
       uni.navigateTo({ url: '/pages/settings/settings' })
     },
 
+    goToRecent() {
+      uni.showToast({ title: '最近播放功能开发中', icon: 'none' })
+    },
+
+    goToDownload() {
+      uni.showToast({ title: '下载管理功能开发中', icon: 'none' })
+    },
+
+    goToRadio() {
+      uni.showToast({ title: '我的电台功能开发中', icon: 'none' })
+    },
+
+    goToCollection() {
+      uni.showToast({ title: '收藏专辑功能开发中', icon: 'none' })
+    },
+
       async clearFavorites() {
          if (!this.user.id) return
          uni.showModal({
