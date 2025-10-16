@@ -37,6 +37,7 @@
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
+import { getSongDetail } from '@/utils/api.js'
 
 export default {
 	name: 'SongList',
@@ -57,23 +58,50 @@ export default {
 	methods: {
 		...mapActions(['playSong', 'toggleFavorite', 'addToPlaylist']),
 		
-		handlePlay(song, index) {
-			this.playSong({
-				song,
-				playlist: this.songs
-			})
+		// 播放歌曲 - 先获取详细信息确保封面完整
+		async handlePlay(song, index) {
+			try {
+				// 如果歌曲封面是默认图，需要获取详细信息
+				const needDetail = !song.albumPic || song.albumPic === '/static/logo.png'
+				
+				let songToPlay = song
+				
+				if (needDetail) {
+					uni.showLoading({ title: '加载中...' })
+					songToPlay = await this.enrichSongDetail(song)
+					// 更新当前列表中的歌曲信息
+					this.songs[index] = songToPlay
+					uni.hideLoading()
+				}
+				
+				// 播放歌曲
+				this.playSong({
+					song: songToPlay,
+					playlist: this.songs
+				})
+			} catch (error) {
+				uni.hideLoading()
+				console.error('播放歌曲失败:', error)
+				// 即使获取详情失败，也尝试播放原始歌曲
+				this.playSong({
+					song,
+					playlist: this.songs
+				})
+			}
 		},
 		
-		showMore(song) {
+		async showMore(song) {
 			uni.showActionSheet({
 				itemList: ['添加到播放列表', '下一首播放', '查看专辑', '分享'],
-				success: (res) => {
+				success: async (res) => {
 					if (res.tapIndex === 0) {
 						// 添加到播放列表
-						this.addToPlaylist(song)
+						const enrichedSong = await this.enrichSongDetail(song)
+						this.addToPlaylist(enrichedSong)
 					} else if (res.tapIndex === 1) {
 						// 下一首播放
-						this.playNext(song)
+						const enrichedSong = await this.enrichSongDetail(song)
+						this.playNext(enrichedSong)
 					} else if (res.tapIndex === 2) {
 						// 查看专辑
 						uni.showToast({
@@ -89,6 +117,40 @@ export default {
 					}
 				}
 			})
+		},
+		
+		// 获取歌曲完整信息
+		async enrichSongDetail(song) {
+			// 如果已有完整封面，直接返回
+			if (song.albumPic && song.albumPic !== '/static/logo.png') {
+				return song
+			}
+			
+			try {
+				const res = await getSongDetail(song.id)
+				
+				if (res.statusCode === 200 && res.data?.songs?.length > 0) {
+					const detailSong = res.data.songs[0]
+					
+					return {
+						...song,
+						id: Number(detailSong.id),
+						name: detailSong.name,
+						artistName: (detailSong.ar && detailSong.ar.length > 0)
+							? detailSong.ar.map(a => a.name).join(', ')
+							: (detailSong.artists && detailSong.artists.length > 0)
+								? detailSong.artists.map(a => a.name).join(', ')
+								: song.artistName || '未知歌手',
+						albumName: detailSong.al?.name || detailSong.album?.name || song.albumName || '未知专辑',
+						albumPic: detailSong.al?.picUrl || detailSong.album?.picUrl || song.albumPic || '/static/logo.png',
+						url: song.url || `https://music.163.com/song/media/outer/url?id=${detailSong.id}.mp3`
+					}
+				}
+			} catch (error) {
+				console.error('获取歌曲详情失败:', error)
+			}
+			
+			return song
 		},
 		
 		// 下一首播放（插入到当前歌曲后面）

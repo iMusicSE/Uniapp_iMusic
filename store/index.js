@@ -10,6 +10,7 @@ import { createStore } from 'vuex'
 // #endif
 
 import { getApiUrl } from '@/utils/config.js'
+import { getSongDetail } from '@/utils/api.js'
 
 // #ifndef VUE3
 const store = new Vuex.Store({
@@ -154,19 +155,57 @@ const store = createStore({
 			}
 		},
 
-		playSong({ commit, state, dispatch }, { song, playlist }) {
-			commit('SET_CURRENT_SONG', song)
+		async playSong({ commit, state, dispatch }, { song, playlist }) {
+			let enrichedSong = song
+			
+			// 如果歌曲封面不完整，先获取详细信息
+			if (!song.albumPic || song.albumPic === '/static/logo.png') {
+				try {
+					const res = await getSongDetail(song.id)
+					
+					if (res.statusCode === 200 && res.data?.songs?.length > 0) {
+						const detailSong = res.data.songs[0]
+						
+						enrichedSong = {
+							...song,
+							id: Number(detailSong.id),
+							name: detailSong.name,
+							artistName: (detailSong.ar && detailSong.ar.length > 0)
+								? detailSong.ar.map(a => a.name).join(', ')
+								: (detailSong.artists && detailSong.artists.length > 0)
+									? detailSong.artists.map(a => a.name).join(', ')
+									: song.artistName || '未知歌手',
+							albumName: detailSong.al?.name || detailSong.album?.name || song.albumName || '未知专辑',
+							albumPic: detailSong.al?.picUrl || detailSong.album?.picUrl || song.albumPic || '/static/logo.png',
+							url: song.url || `https://music.163.com/song/media/outer/url?id=${detailSong.id}.mp3`
+						}
+						
+						// 更新播放列表中的歌曲信息
+						if (playlist && playlist.length > 0) {
+							const index = playlist.findIndex(item => item.id === song.id)
+							if (index >= 0) {
+								playlist[index] = enrichedSong
+							}
+						}
+					}
+				} catch (error) {
+					console.error('获取歌曲详情失败:', error)
+					// 继续使用原始歌曲信息
+				}
+			}
+			
+			commit('SET_CURRENT_SONG', enrichedSong)
 			if (playlist && playlist.length > 0) {
 				commit('SET_PLAYLIST', playlist)
-				const index = playlist.findIndex(item => item.id === song.id)
+				const index = playlist.findIndex(item => item.id === enrichedSong.id)
 				commit('SET_CURRENT_INDEX', index >= 0 ? index : 0)
 			}
 
-			commit('ADD_HISTORY', song)
-			dispatch('syncHistory', song)
+			commit('ADD_HISTORY', enrichedSong)
+			dispatch('syncHistory', enrichedSong)
 
 			if (state.audioContext) {
-				state.audioContext.src = song.url
+				state.audioContext.src = enrichedSong.url
 				state.audioContext.play()
 				commit('SET_PLAY_STATE', true)
 			}

@@ -157,15 +157,24 @@ export default {
 				
 				if (res.statusCode === 200 && res.data.result) {
 					const songs = res.data.result.songs || []
-					this.searchResults = songs.map(song => ({
-						id: song.id,
-						name: song.name,
-						artistName: song.artists.map(artist => artist.name).join(', '),
-						albumName: song.album.name,
-						albumPic: song.album.picUrl || song.album.blurPicUrl || '/static/logo.png',
-						url: `http://music.163.com/song/media/outer/url?id=${song.id}.mp3`,
-						vip: song.fee === 1
-					}))
+					this.searchResults = songs.map(song => {
+						// 尝试多个可能的封面字段路径
+						const albumPic = song.al?.picUrl 
+							|| song.album?.picUrl 
+							|| song.album?.blurPicUrl 
+							|| song.al?.blurPicUrl
+							|| '/static/logo.png'
+						
+						return {
+							id: song.id,
+							name: song.name,
+							artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
+							albumName: song.album?.name || song.al?.name || '未知专辑',
+							albumPic: albumPic,
+							url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`,
+							vip: song.fee === 1
+						}
+					})
 				} else {
 					this.searchResults = []
 				}
