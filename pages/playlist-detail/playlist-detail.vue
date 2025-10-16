@@ -41,6 +41,7 @@
 		<!-- 歌曲列表 -->
 		<view class="song-list-section">
 			<view class="section-title">歌曲列表</view>
+			<view class="api-notice">由于网易云API限制，只能获取前10/20首歌曲</view>
 			
 			<view v-if="loading" class="loading-wrapper">
 				<text class="loading-text">加载中...</text>
@@ -474,6 +475,13 @@ export default {
 	font-size: 32rpx;
 	font-weight: bold;
 	color: #333;
+}
+
+.api-notice {
+	padding: 0 30rpx 20rpx;
+	font-size: 24rpx;
+	color: #999;
+	line-height: 1.5;
 }
 
 .loading-wrapper,
