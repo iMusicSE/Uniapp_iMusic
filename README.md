@@ -79,7 +79,19 @@ Uniapp_iMusic/
 
 ## 截图预览
 
-还没放呢
+<p align="center">
+  <img src="static/screenshoots/1.png" width="200"/>
+  <img src="static/screenshoots/2.png" width="200"/>
+  <img src="static/screenshoots/3.png" width="200"/>
+  <img src="static/screenshoots/4.png" width="200"/>
+</p>
+
+<p align="center">
+  <img src="static/screenshoots/5.png" width="200"/>
+  <img src="static/screenshoots/6.png" width="200"/>
+  <img src="static/screenshoots/7.png" width="200"/>
+  <img src="static/screenshoots/8.png" width="200"/>
+</p>
 
 ## API 说明
 
