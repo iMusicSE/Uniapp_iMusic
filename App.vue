@@ -13,10 +13,16 @@
 		if (currentUser && currentUser.id) {
 			console.log('  ├─ 恢复用户登录状态')
 			console.log('  ├─ 用户ID:', currentUser.id, '类型:', typeof currentUser.id)
-			store.commit('user/SET_USER_ID', currentUser.id)
-			console.log('  └─ ✅ Vuex userId已恢复:', store.state.user.userId)
+			store.commit('user/SET_USER_INFO', currentUser)
+			console.log('  └─ ✅ Vuex 用户信息已恢复:', {
+				userId: store.state.user.userId,
+				username: store.state.user.username,
+				isGuest: store.state.user.isGuest
+			})
 		} else {
-			console.log('  └─ ⚠️ 未找到登录用户信息，userId为空')
+			console.log('  └─ ⚠️ 未找到登录用户信息，保持"未登录"状态')
+			// 确保初始化为未登录状态
+			store.commit('user/CLEAR_USER_INFO')
 		}
 		
 		// 清理过期缓存

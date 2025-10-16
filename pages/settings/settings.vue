@@ -12,25 +12,32 @@
       <!-- 用户名 -->
       <view class="item">
         <text class="label">用户名</text>
-        <input v-model="user.username" placeholder="请输入用户名" class="input" />
+        <input v-model="user.username" placeholder="请输入用户名" class="input" :disabled="!isLoggedIn" />
       </view>
 
       <!-- 旧密码 -->
-      <view class="item">
+      <view class="item" v-if="isLoggedIn">
         <text class="label">旧密码</text>
         <input v-model="oldPassword" type="password" placeholder="请输入旧密码" class="input" />
       </view>
 
       <!-- 新密码 -->
-      <view class="item">
+      <view class="item" v-if="isLoggedIn">
         <text class="label">新密码</text>
         <input v-model="newPassword" type="password" placeholder="请输入新密码" class="input" />
       </view>
 
-      <button class="save-btn" @click="saveSettings">保存修改</button>
+      <button class="save-btn" @click="saveSettings" v-if="isLoggedIn">保存修改</button>
+      
+      <!-- 未登录提示 -->
+      <view class="guest-tip" v-if="!isLoggedIn">
+        <text class="tip-icon">ℹ️</text>
+        <text class="tip-text">您当前处于未登录状态，请先登录后再修改个人信息</text>
+        <button class="login-btn" @click="goToLogin">前往登录</button>
+      </view>
 
       <!-- 退出登录 -->
-      <button class="logout-btn" @click="logout">退出当前账户</button>
+      <button class="logout-btn" @click="logout" v-if="isLoggedIn">退出登录</button>
     </view>
     
     <!-- 缓存管理 -->
@@ -73,13 +80,13 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import { getApiUrl } from '@/utils/config.js'
 import { CacheManager, SongDetailCache, SearchResultCache, RankListCache } from '@/utils/cache.js'
 
 export default {
   data() {
     return {
-      user: {},
       oldPassword: '',
       newPassword: '',
       cacheInfo: {
@@ -91,15 +98,31 @@ export default {
       }
     }
   },
+  computed: {
+    ...mapGetters('user', ['getUserInfo', 'isLoggedIn', 'getUsername', 'getAvatar']),
+    user() {
+      return {
+        id: this.getUserInfo.id,
+        username: this.getUsername,
+        avatar: this.getAvatar,
+        isGuest: this.getUserInfo.isGuest
+      }
+    }
+  },
   onShow() {
-    const userInfo = uni.getStorageSync('currentUser')
-    if (userInfo) this.user = { ...userInfo }
+    console.log('⚙️ [设置页面] 显示, 用户信息:', this.user)
     // 加载缓存信息
     this.loadCacheInfo()
   },
   methods: {
     // 修改头像
     changeAvatar() {
+      // 未登录时不允许修改
+      if (!this.isLoggedIn) {
+        uni.showToast({ title: '请先登录', icon: 'none' })
+        return
+      }
+      
       uni.chooseImage({
         count: 1,
         success: (res) => {
@@ -114,8 +137,8 @@ export default {
             success: (uploadRes) => {
               const data = JSON.parse(uploadRes.data);
               if (data.success) {
-                this.user.avatar = data.avatarUrl;
-                uni.setStorageSync('currentUser', this.user);
+                // 更新 Vuex
+                this.$store.dispatch('user/updateAvatar', data.avatarUrl)
                 uni.showToast({ title: '头像更新成功' });
               } else {
                 uni.showToast({ title: data.message, icon: 'none' });
@@ -132,6 +155,12 @@ export default {
 
     // 保存修改
     saveSettings() {
+      // 未登录时不允许保存
+      if (!this.isLoggedIn) {
+        uni.showToast({ title: '请先登录', icon: 'none' })
+        return
+      }
+      
       if (!this.user.username) {
         return uni.showToast({ title: '用户名不能为空', icon: 'none' })
       }
@@ -176,7 +205,8 @@ export default {
         },
         success: (res) => {
           if (res.data.success) {
-            uni.setStorageSync('currentUser', this.user)
+            // 更新 Vuex
+            this.$store.dispatch('user/updateUsername', this.user.username)
             uni.showToast({ title: '更新成功' })
             this.oldPassword = ''
             this.newPassword = ''
@@ -198,24 +228,28 @@ export default {
         content: '确定要退出当前账户吗？',
         success: (res) => {
           if (res.confirm) {
-            // ✅ 清除用户与缓存数据
-            uni.removeStorageSync('currentUser');
-            uni.removeStorageSync('favorites');
-            uni.removeStorageSync('history');
+            console.log('👋 [退出登录] 清除用户数据')
+            
+            // ✅ 清除本地存储数据
+            uni.removeStorageSync('currentUser')
+            uni.removeStorageSync('favorites')
+            uni.removeStorageSync('history')
     
             // ✅ 清空 Vuex 状态
-            const store = this.$store;
-            store.commit('favorites/CLEAR_FAVORITES');
-            store.commit('history/CLEAR_HISTORY');
-            store.commit('user/SET_USER_ID', null);
+            const store = this.$store
+            store.dispatch('user/clearUserInfo')  // 使用 action 清除用户信息
+            store.commit('favorites/CLEAR_FAVORITES')
+            store.commit('history/CLEAR_HISTORY')
+    
+            console.log('  └─ 用户数据已清除，跳转到登录页')
     
             // ✅ 跳转登录页
             uni.reLaunch({
               url: '/pages/login/login'
-            });
+            })
           }
         }
-      });
+      })
     },
     
     // 加载缓存信息
@@ -271,6 +305,11 @@ export default {
           }
         }
       })
+    },
+    
+    // 前往登录
+    goToLogin() {
+      uni.reLaunch({ url: '/pages/login/login' })
     }
   }
 }
@@ -463,5 +502,48 @@ export default {
   font-size: 24rpx;
   color: #666;
   line-height: 1.6;
+}
+
+/* 未登录提示 */
+.guest-tip {
+  margin-top: 30rpx;
+  padding: 30rpx;
+  background: #f8f9fa;
+  border-radius: 15rpx;
+  border-left: 4rpx solid #667eea;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.tip-icon {
+  font-size: 48rpx;
+}
+
+.guest-tip .tip-text {
+  font-size: 26rpx;
+  color: #555;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.login-btn {
+  width: 100%;
+  height: 70rpx;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  text-align: center;
+  line-height: 70rpx;
+  box-shadow: 0 4rpx 10rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.2s;
+}
+
+.login-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
 }
 </style>

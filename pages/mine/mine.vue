@@ -3,10 +3,11 @@
 		<!-- 用户信息 -->
 		<view class="user-section">
 			<view class="user-header">
-				<image class="avatar" :src="user.avatar || '/static/logo.png'" mode="aspectFill"></image>
+				<image class="avatar" :src="user.avatar" mode="aspectFill"></image>
 				<view class="user-info">
-					<text class="username">{{ user.username || '音乐爱好者' }}</text>
-					<text class="user-desc">发现好音乐，享受好生活</text>
+					<text class="username">{{ user.username }}</text>
+					<text class="user-desc" v-if="isLoggedIn">发现好音乐，享受好生活</text>
+					<text class="user-desc" v-else @click="goToLogin">点击登录，解锁更多功能</text>
 				</view>
 				<text class="setting-icon" @click="goToSetting">⚙️</text>
 			</view>
@@ -119,7 +120,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
 import { getApiUrl } from '@/utils/config.js'
@@ -129,7 +130,6 @@ export default {
   components: { MiniPlayer, SongList },
   data() {
     return {
-      user: {},
       favorites: [],
       history: [],
       // 加载状态
@@ -149,18 +149,29 @@ export default {
     }
   },
   computed: {
-    ...mapState('player', ['playlist'])
+    ...mapState('player', ['playlist']),
+    ...mapGetters('user', ['getUserInfo', 'isLoggedIn', 'getUsername', 'getAvatar']),
+    // 获取用户对象，用于模板显示
+    user() {
+      return {
+        username: this.getUsername,
+        avatar: this.getAvatar
+      }
+    }
   },
   async onShow() {
-    const userInfo = uni.getStorageSync('currentUser')
-    if (userInfo) this.user = { ...userInfo }
+    const userInfo = this.getUserInfo
+    console.log('📱 [我的页面] 显示, 用户信息:', userInfo)
 
-    if (!userInfo || userInfo.isGuest) {
-      // 游客模式：加载本地存储的数据
+    // 未登录或游客模式：只加载本地数据
+    if (!this.isLoggedIn) {
+      console.log('  └─ 未登录状态，加载本地数据')
       this.loadLocalData()
       return
     }
 
+    // 已登录：从服务器加载数据
+    console.log('  └─ 已登录，从服务器加载数据')
     await this.loadUserData(userInfo.id)
   },
   methods: {
@@ -279,6 +290,10 @@ export default {
       uni.showToast({ title: '收藏专辑功能开发中', icon: 'none' })
     },
     
+    goToLogin() {
+      uni.reLaunch({ url: '/pages/login/login' })
+    },
+    
     // 重新加载失败的收藏
     async reloadFavorites() {
       if (this.failedFavoriteIds.length === 0) return
@@ -355,7 +370,23 @@ export default {
     },
 
       async clearFavorites() {
-         if (!this.user.id) return
+         // 未登录时只清空本地数据
+         if (!this.isLoggedIn) {
+           uni.showModal({
+             title: '提示',
+             content: '确定清空所有收藏吗？',
+             success: async (res) => {
+               if (res.confirm) {
+                 this.$store.commit('favorites/CLEAR_FAVORITES')
+                 this.favorites = []
+                 uni.showToast({ title: '已清空本地收藏', icon: 'success' })
+               }
+             }
+           })
+           return
+         }
+         
+         // 已登录时清空服务器和本地数据
          uni.showModal({
            title: '提示',
            content: '确定清空所有收藏吗？',
@@ -376,7 +407,23 @@ export default {
        },
      
        async clearHistory() {
-         if (!this.user.id) return
+         // 未登录时只清空本地数据
+         if (!this.isLoggedIn) {
+           uni.showModal({
+             title: '提示',
+             content: '确定清空播放历史吗？',
+             success: async (res) => {
+               if (res.confirm) {
+                 this.$store.commit('history/CLEAR_HISTORY')
+                 this.history = []
+                 uni.showToast({ title: '已清空本地历史', icon: 'success' })
+               }
+             }
+           })
+           return
+         }
+         
+         // 已登录时清空服务器和本地数据
          uni.showModal({
            title: '提示',
            content: '确定清空播放历史吗？',

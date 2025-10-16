@@ -63,31 +63,31 @@ export default {
 			console.log('  ├─ 收藏数据响应:', favRes.data);
 			console.log('  ├─ 历史数据响应:', hisRes.data);
 			
-			    const fullUser = {
-			      ...user,
-			      favorites: (favRes.data.data || []).map(item => item.musicId),  
-			      history: (hisRes.data.data || []).map(item => item.musicId)     // 只保留 musicId
-			    };
+			const fullUser = {
+			  ...user,
+			  isGuest: false,  // 已登录用户
+			  favorites: (favRes.data.data || []).map(item => item.musicId),  
+			  history: (hisRes.data.data || []).map(item => item.musicId)
+			};
 			
-		console.log('  ├─ 准备设置Vuex中的userId...');
-        store.commit('user/SET_USER_ID', user.id);
-		console.log('  ├─ ✅ Vuex userId已设置:', store.state.user.userId);
-		
-		store.commit('favorites/SET_FAVORITES', fullUser.favorites);
-		store.commit('history/CLEAR_HISTORY');
-		fullUser.history.forEach(musicId => {
-			store.commit('history/ADD_HISTORY', { id: musicId });
-		});
-		
-		    uni.setStorageSync('currentUser', fullUser);
-		console.log('  └─ ✅ 用户数据已保存到本地存储');
-	} catch (err) {
-		console.error('  └─ ❌ 加载用户数据失败:', err);
-		// 即使加载数据失败，也允许登录
-		store.commit('user/SET_USER_ID', user.id);
-		console.log('  └─ ⚠️ 已设置userId（忽略数据加载失败）:', store.state.user.userId);
-		uni.setStorageSync('currentUser', user);
-	}
+			console.log('  ├─ 准备设置Vuex中的用户信息...');
+			store.dispatch('user/setUserInfo', fullUser);
+			console.log('  ├─ ✅ Vuex 用户信息已设置:', store.state.user);
+			
+			store.commit('favorites/SET_FAVORITES', fullUser.favorites);
+			store.commit('history/CLEAR_HISTORY');
+			fullUser.history.forEach(musicId => {
+				store.commit('history/ADD_HISTORY', { id: musicId });
+			});
+			
+			console.log('  └─ ✅ 用户数据已保存');
+		} catch (err) {
+			console.error('  └─ ❌ 加载用户数据失败:', err);
+			// 即使加载数据失败，也允许登录
+			const basicUser = { ...user, isGuest: false };
+			store.dispatch('user/setUserInfo', basicUser);
+			console.log('  └─ ⚠️ 已设置基本用户信息（忽略数据加载失败）');
+		}
 
         // 跳转到 discover 页面（tabBar 页面）
         setTimeout(() => {
@@ -108,16 +108,17 @@ export default {
     guestVisit() {
       console.log('👤 [DEBUG-登录] 游客访问');
       const guestUser = {
-        id: 0,
-        username: '游客用户',
+        id: null,
+        username: '未登录',
         avatar: '/static/logo.png',
         isGuest: true
       };
 
       console.log('  ├─ 游客用户ID:', guestUser.id, '类型:', typeof guestUser.id);
-      console.log('  └─ ⚠️ 游客模式下userId为0，不会同步数据到数据库');
+      console.log('  └─ ⚠️ 未登录模式下userId为null，不会同步数据到数据库');
       
-      uni.setStorageSync('currentUser', guestUser);
+      // 设置到 Vuex
+      store.dispatch('user/setUserInfo', guestUser);
       uni.showToast({ title: '以游客身份进入', icon: 'none' });
 
       setTimeout(() => {
