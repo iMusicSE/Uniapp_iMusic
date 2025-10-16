@@ -47,28 +47,42 @@ export default {
 
       if (res.data.success) {
         const user = res.data.user;
+        console.log('✅ [DEBUG-登录] 登录成功');
+        console.log('  ├─ 用户信息:', user);
+        console.log('  └─ 用户ID:', user.id, '类型:', typeof user.id);
+        
         uni.showToast({ title: '登录成功', icon: 'success' });
         
 		try {
+			console.log('  ├─ 开始加载用户收藏和历史数据...');
 			const [favRes, hisRes] = await Promise.all([
 			      uni.request({ url: getApiUrl(`/favorites/${user.id}`), method: 'GET' }),
 			      uni.request({ url: getApiUrl(`/history/${user.id}`), method: 'GET' })
 			    ]);
+			
+			console.log('  ├─ 收藏数据响应:', favRes.data);
+			console.log('  ├─ 历史数据响应:', hisRes.data);
 			
 			    const fullUser = {
 			      ...user,
 			      favorites: (favRes.data.data || []).map(item => item.musicId),  
 			      history: (hisRes.data.data || []).map(item => item.musicId)     // 只保留 musicId
 			    };
-	            store.commit('SET_USER_ID', user.id);
-				store.commit('SET_FAVORITES', fullUser.favorites);
-				store.commit('SET_HISTORY', fullUser.history);
+			
+			console.log('  ├─ 准备设置Vuex中的userId...');
+	        store.commit('SET_USER_ID', user.id);
+			console.log('  ├─ ✅ Vuex userId已设置:', store.state.userId);
+			
+			store.commit('SET_FAVORITES', fullUser.favorites);
+			store.commit('SET_HISTORY', fullUser.history);
 			
 			    uni.setStorageSync('currentUser', fullUser);
+			console.log('  └─ ✅ 用户数据已保存到本地存储');
 		} catch (err) {
-			console.error('加载用户数据失败:', err);
+			console.error('  └─ ❌ 加载用户数据失败:', err);
 			// 即使加载数据失败，也允许登录
 			store.commit('SET_USER_ID', user.id);
+			console.log('  └─ ⚠️ 已设置userId（忽略数据加载失败）:', store.state.userId);
 			uni.setStorageSync('currentUser', user);
 		}
 
@@ -89,6 +103,7 @@ export default {
 
     // ✅ 新增：游客访问逻辑
     guestVisit() {
+      console.log('👤 [DEBUG-登录] 游客访问');
       const guestUser = {
         id: 0,
         username: '游客用户',
@@ -96,6 +111,9 @@ export default {
         isGuest: true
       };
 
+      console.log('  ├─ 游客用户ID:', guestUser.id, '类型:', typeof guestUser.id);
+      console.log('  └─ ⚠️ 游客模式下userId为0，不会同步数据到数据库');
+      
       uni.setStorageSync('currentUser', guestUser);
       uni.showToast({ title: '以游客身份进入', icon: 'none' });
 

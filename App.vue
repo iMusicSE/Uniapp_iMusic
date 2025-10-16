@@ -3,7 +3,20 @@
 	
 	export default {
 		onLaunch: function() {
-			console.log('App Launch')
+			console.log('🚀 [DEBUG-应用] App Launch')
+			
+			// 检查本地存储的用户信息
+			const currentUser = uni.getStorageSync('currentUser')
+			console.log('  ├─ 本地存储的用户信息:', currentUser)
+			
+			if (currentUser && currentUser.id) {
+				console.log('  ├─ 恢复用户登录状态')
+				console.log('  ├─ 用户ID:', currentUser.id, '类型:', typeof currentUser.id)
+				store.commit('SET_USER_ID', currentUser.id)
+				console.log('  └─ ✅ Vuex userId已恢复:', store.state.userId)
+			} else {
+				console.log('  └─ ⚠️ 未找到登录用户信息，userId为空')
+			}
 			
 			// 初始化音频上下文
 			store.dispatch('initAudioContext')

@@ -155,61 +155,68 @@ const store = createStore({
 			}
 		},
 
-		async playSong({ commit, state, dispatch }, { song, playlist }) {
-			let enrichedSong = song
-			
-			// 如果歌曲封面不完整，先获取详细信息
-			if (!song.albumPic || song.albumPic === '/static/logo.png') {
-				try {
-					const res = await getSongDetail(song.id)
+	async playSong({ commit, state, dispatch }, { song, playlist }) {
+		console.log('▶️  [DEBUG-前端] playSong 被调用')
+		console.log('  ├─ song:', song)
+		console.log('  ├─ song.id:', song?.id)
+		console.log('  └─ 当前 userId:', state.userId)
+		
+		let enrichedSong = song
+		
+		// 如果歌曲封面不完整，先获取详细信息
+		if (!song.albumPic || song.albumPic === '/static/logo.png') {
+			try {
+				const res = await getSongDetail(song.id)
+				
+				if (res.statusCode === 200 && res.data?.songs?.length > 0) {
+					const detailSong = res.data.songs[0]
 					
-					if (res.statusCode === 200 && res.data?.songs?.length > 0) {
-						const detailSong = res.data.songs[0]
-						
-						enrichedSong = {
-							...song,
-							id: Number(detailSong.id),
-							name: detailSong.name,
-							artistName: (detailSong.ar && detailSong.ar.length > 0)
-								? detailSong.ar.map(a => a.name).join(', ')
-								: (detailSong.artists && detailSong.artists.length > 0)
-									? detailSong.artists.map(a => a.name).join(', ')
-									: song.artistName || '未知歌手',
-							albumName: detailSong.al?.name || detailSong.album?.name || song.albumName || '未知专辑',
-							albumPic: detailSong.al?.picUrl || detailSong.album?.picUrl || song.albumPic || '/static/logo.png',
-							url: song.url || `https://music.163.com/song/media/outer/url?id=${detailSong.id}.mp3`
-						}
-						
-						// 更新播放列表中的歌曲信息
-						if (playlist && playlist.length > 0) {
-							const index = playlist.findIndex(item => item.id === song.id)
-							if (index >= 0) {
-								playlist[index] = enrichedSong
-							}
+					enrichedSong = {
+						...song,
+						id: Number(detailSong.id),
+						name: detailSong.name,
+						artistName: (detailSong.ar && detailSong.ar.length > 0)
+							? detailSong.ar.map(a => a.name).join(', ')
+							: (detailSong.artists && detailSong.artists.length > 0)
+								? detailSong.artists.map(a => a.name).join(', ')
+								: song.artistName || '未知歌手',
+						albumName: detailSong.al?.name || detailSong.album?.name || song.albumName || '未知专辑',
+						albumPic: detailSong.al?.picUrl || detailSong.album?.picUrl || song.albumPic || '/static/logo.png',
+						url: song.url || `https://music.163.com/song/media/outer/url?id=${detailSong.id}.mp3`
+					}
+					
+					// 更新播放列表中的歌曲信息
+					if (playlist && playlist.length > 0) {
+						const index = playlist.findIndex(item => item.id === song.id)
+						if (index >= 0) {
+							playlist[index] = enrichedSong
 						}
 					}
-				} catch (error) {
-					console.error('获取歌曲详情失败:', error)
-					// 继续使用原始歌曲信息
 				}
+			} catch (error) {
+				console.error('获取歌曲详情失败:', error)
+				// 继续使用原始歌曲信息
 			}
-			
-			commit('SET_CURRENT_SONG', enrichedSong)
-			if (playlist && playlist.length > 0) {
-				commit('SET_PLAYLIST', playlist)
-				const index = playlist.findIndex(item => item.id === enrichedSong.id)
-				commit('SET_CURRENT_INDEX', index >= 0 ? index : 0)
-			}
+		}
+		
+		commit('SET_CURRENT_SONG', enrichedSong)
+		if (playlist && playlist.length > 0) {
+			commit('SET_PLAYLIST', playlist)
+			const index = playlist.findIndex(item => item.id === enrichedSong.id)
+			commit('SET_CURRENT_INDEX', index >= 0 ? index : 0)
+		}
 
-			commit('ADD_HISTORY', enrichedSong)
-			dispatch('syncHistory', enrichedSong)
+		console.log('  ├─ 准备添加到播放历史并同步到数据库...')
+		commit('ADD_HISTORY', enrichedSong)
+		dispatch('syncHistory', enrichedSong)
 
-			if (state.audioContext) {
-				state.audioContext.src = enrichedSong.url
-				state.audioContext.play()
-				commit('SET_PLAY_STATE', true)
-			}
-		},
+		if (state.audioContext) {
+			state.audioContext.src = enrichedSong.url
+			state.audioContext.play()
+			commit('SET_PLAY_STATE', true)
+			console.log('  └─ ✅ 歌曲开始播放')
+		}
+	},
 
 		togglePlay({ commit, state }) {
 			if (state.audioContext) {
@@ -251,32 +258,65 @@ const store = createStore({
 			uni.showToast({ title: modeText[newMode], icon: 'none', duration: 1500 })
 		},
 
-		// ------------------ ❤️ 收藏功能 + 同步数据库 ------------------
-		async syncFavorite({ state }, song) {
-			if (!state.userId) return
-			try {
-				await uni.request({
-					url: getApiUrl('/favorites/add'),
-					method: 'POST',
-					data: { userId: state.userId, musicId: song.id }
-				})
-			} catch (err) {
-				console.error('同步收藏失败', err)
-			}
-		},
+	// ------------------ ❤️ 收藏功能 + 同步数据库 ------------------
+	async syncFavorite({ state }, song) {
+		console.log('🎵 [DEBUG-前端] syncFavorite 被调用')
+		console.log('  ├─ userId:', state.userId, '类型:', typeof state.userId)
+		console.log('  ├─ song:', song)
+		console.log('  └─ song.id:', song.id, '类型:', typeof song.id)
+		
+		if (!state.userId) {
+			console.warn('  └─ ⚠️ userId 为空，无法同步收藏')
+			return
+		}
+		
+		try {
+			const url = getApiUrl('/favorites/add')
+			const data = { userId: state.userId, musicId: song.id }
+			console.log('  ├─ 请求URL:', url)
+			console.log('  ├─ 请求数据:', data)
+			
+			const result = await uni.request({
+				url: url,
+				method: 'POST',
+				data: data
+			})
+			
+			console.log('  ├─ 服务器响应:', result)
+			console.log('  └─ ✅ 收藏同步成功')
+		} catch (err) {
+			console.error('  └─ ❌ 同步收藏失败', err)
+		}
+	},
 
-		async removeFavoriteDB({ state }, songId) {
-			if (!state.userId) return
-			try {
-				await uni.request({
-					url: getApiUrl('/favorites/delete'),
-					method: 'POST',
-					data: { userId: state.userId, musicId: songId }
-				})
-			} catch (err) {
-				console.error('同步取消收藏失败', err)
-			}
-		},
+	async removeFavoriteDB({ state }, songId) {
+		console.log('🗑️  [DEBUG-前端] removeFavoriteDB 被调用')
+		console.log('  ├─ userId:', state.userId, '类型:', typeof state.userId)
+		console.log('  └─ songId:', songId, '类型:', typeof songId)
+		
+		if (!state.userId) {
+			console.warn('  └─ ⚠️ userId 为空，无法同步删除收藏')
+			return
+		}
+		
+		try {
+			const url = getApiUrl('/favorites/delete')
+			const data = { userId: state.userId, musicId: songId }
+			console.log('  ├─ 请求URL:', url)
+			console.log('  ├─ 请求数据:', data)
+			
+			const result = await uni.request({
+				url: url,
+				method: 'POST',
+				data: data
+			})
+			
+			console.log('  ├─ 服务器响应:', result)
+			console.log('  └─ ✅ 删除收藏同步成功')
+		} catch (err) {
+			console.error('  └─ ❌ 同步取消收藏失败', err)
+		}
+	},
 
 		async clearFavorites({ commit, state }) {
 			commit('CLEAR_FAVORITES')
@@ -294,31 +334,56 @@ const store = createStore({
 			}
 		},
 
-		toggleFavorite({ commit, state, getters, dispatch }, song) {
-			if (getters.isFavorite(song.id)) {
-				commit('REMOVE_FAVORITE', song.id)
-				dispatch('removeFavoriteDB', song.id)
-				uni.showToast({ title: '已取消收藏', icon: 'none' })
-			} else {
-				commit('ADD_FAVORITE', song)
-				dispatch('syncFavorite', song)
-				uni.showToast({ title: '已添加到收藏', icon: 'success' })
-			}
-		},
+	toggleFavorite({ commit, state, getters, dispatch }, song) {
+		console.log('❤️ [DEBUG-前端] toggleFavorite 被调用')
+		console.log('  ├─ song:', song)
+		console.log('  ├─ song.id:', song?.id)
+		console.log('  ├─ 当前是否已收藏:', getters.isFavorite(song.id))
+		console.log('  └─ 当前 userId:', state.userId)
+		
+		if (getters.isFavorite(song.id)) {
+			console.log('  ├─ 执行取消收藏操作...')
+			commit('REMOVE_FAVORITE', song.id)
+			dispatch('removeFavoriteDB', song.id)
+			uni.showToast({ title: '已取消收藏', icon: 'none' })
+		} else {
+			console.log('  ├─ 执行添加收藏操作...')
+			commit('ADD_FAVORITE', song)
+			dispatch('syncFavorite', song)
+			uni.showToast({ title: '已添加到收藏', icon: 'success' })
+		}
+	},
 
-		// ------------------ 🕒 播放历史 + 同步数据库 ------------------
-		async syncHistory({ state }, song) {
-			if (!state.userId) return
-			try {
-				await uni.request({
-					url: getApiUrl('/history/add'),
-					method: 'POST',
-					data: { userId: state.userId, musicId: song.id }
-				})
-			} catch (err) {
-				console.error('同步历史失败', err)
-			}
-		},
+	// ------------------ 🕒 播放历史 + 同步数据库 ------------------
+	async syncHistory({ state }, song) {
+		console.log('🕒 [DEBUG-前端] syncHistory 被调用')
+		console.log('  ├─ userId:', state.userId, '类型:', typeof state.userId)
+		console.log('  ├─ song:', song)
+		console.log('  └─ song.id:', song.id, '类型:', typeof song.id)
+		
+		if (!state.userId) {
+			console.warn('  └─ ⚠️ userId 为空，无法同步播放历史')
+			return
+		}
+		
+		try {
+			const url = getApiUrl('/history/add')
+			const data = { userId: state.userId, musicId: song.id }
+			console.log('  ├─ 请求URL:', url)
+			console.log('  ├─ 请求数据:', data)
+			
+			const result = await uni.request({
+				url: url,
+				method: 'POST',
+				data: data
+			})
+			
+			console.log('  ├─ 服务器响应:', result)
+			console.log('  └─ ✅ 播放历史同步成功')
+		} catch (err) {
+			console.error('  └─ ❌ 同步历史失败', err)
+		}
+	},
 
 		async clearHistory({ commit, state }) {
 			commit('CLEAR_HISTORY')

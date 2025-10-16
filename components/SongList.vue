@@ -66,6 +66,10 @@ export default {
 		
 		// 播放歌曲 - 按需加载详细信息
 		async handlePlay(song, index) {
+			console.log('🎵 [DEBUG-组件] SongList.handlePlay 被调用')
+			console.log('  ├─ song:', song)
+			console.log('  └─ index:', index)
+			
 			try {
 				// 检查缓存中是否已有详细信息
 				let songToPlay = this.enrichedSongsCache[song.id] || song
