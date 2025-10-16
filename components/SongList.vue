@@ -38,6 +38,7 @@
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
 import { getSongDetail } from '@/utils/api.js'
+import { SongDetailCache } from '@/utils/cache.js'
 
 export default {
 	name: 'SongList',
@@ -53,8 +54,7 @@ export default {
 	},
 	data() {
 		return {
-			// 本地缓存：存储已加载详细信息的歌曲
-			enrichedSongsCache: {}
+			// 已移除组件级缓存，改用 localStorage 持久化缓存
 		}
 	},
 	computed: {
@@ -75,18 +75,19 @@ export default {
 			console.log('  └─ index:', index)
 			
 			try {
-				// 检查缓存中是否已有详细信息
-				let songToPlay = this.enrichedSongsCache[song.id] || song
+				// 先从持久化缓存中获取
+				let songToPlay = SongDetailCache.get(song.id) || song
 				
 				// 如果歌曲封面是默认图且未在缓存中，需要获取详细信息
+				const cachedSong = SongDetailCache.get(song.id)
 				const needDetail = (!songToPlay.albumPic || songToPlay.albumPic === '/static/logo.png') 
-					&& !this.enrichedSongsCache[song.id]
+					&& !cachedSong
 				
 				if (needDetail) {
 					uni.showLoading({ title: '加载中...', mask: true })
 					songToPlay = await this.enrichSongDetail(song)
-					// 缓存详细信息
-					this.enrichedSongsCache[song.id] = songToPlay
+					// 保存到持久化缓存
+					SongDetailCache.set(song.id, songToPlay)
 					uni.hideLoading()
 				}
 				
@@ -141,14 +142,15 @@ export default {
 		
 		// 获取完整歌曲信息（使用缓存）
 		async getEnrichedSong(song) {
-			// 如果缓存中已有，直接返回
-			if (this.enrichedSongsCache[song.id]) {
-				return this.enrichedSongsCache[song.id]
+			// 先从持久化缓存中获取
+			const cachedSong = SongDetailCache.get(song.id)
+			if (cachedSong) {
+				return cachedSong
 			}
 			
 			// 否则获取并缓存
 			const enrichedSong = await this.enrichSongDetail(song)
-			this.enrichedSongsCache[song.id] = enrichedSong
+			SongDetailCache.set(song.id, enrichedSong)
 			return enrichedSong
 		},
 		

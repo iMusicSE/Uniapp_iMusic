@@ -1,5 +1,6 @@
 <script>
 	import store from './store/index.js'
+	import { CacheManager } from './utils/cache.js'
 	
 	export default {
 		onLaunch: function() {
@@ -16,6 +17,26 @@
 			console.log('  └─ ✅ Vuex userId已恢复:', store.state.user.userId)
 		} else {
 			console.log('  └─ ⚠️ 未找到登录用户信息，userId为空')
+		}
+		
+		// 清理过期缓存
+		try {
+			const clearedCount = CacheManager.clearExpired()
+			console.log('  ├─ 清理过期缓存:', clearedCount, '个')
+			
+			// 打印缓存信息
+			const cacheInfo = CacheManager.getInfo()
+			if (cacheInfo) {
+				console.log('  ├─ 缓存信息:', {
+					总缓存数: cacheInfo.totalKeys,
+					歌曲详情: cacheInfo.songDetailCount,
+					搜索结果: cacheInfo.searchResultCount,
+					排行榜: cacheInfo.rankListCount,
+					其他: cacheInfo.otherCount
+				})
+			}
+		} catch (error) {
+			console.error('  ├─ 清理缓存失败:', error)
 		}
 		
 		// 初始化音频上下文

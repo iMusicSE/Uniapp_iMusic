@@ -32,23 +32,70 @@
       <!-- 退出登录 -->
       <button class="logout-btn" @click="logout">退出当前账户</button>
     </view>
+    
+    <!-- 缓存管理 -->
+    <view class="settings-card cache-card">
+      <text class="title">缓存管理</text>
+      
+      <view class="cache-info">
+        <view class="cache-item">
+          <text class="cache-label">歌曲详情缓存</text>
+          <text class="cache-value">{{ cacheInfo.songDetailCount }} 个</text>
+        </view>
+        <view class="cache-item">
+          <text class="cache-label">搜索结果缓存</text>
+          <text class="cache-value">{{ cacheInfo.searchResultCount }} 个</text>
+        </view>
+        <view class="cache-item">
+          <text class="cache-label">排行榜缓存</text>
+          <text class="cache-value">{{ cacheInfo.rankListCount }} 个</text>
+        </view>
+        <view class="cache-item">
+          <text class="cache-label">总缓存数</text>
+          <text class="cache-value">{{ cacheInfo.totalKeys }} 个</text>
+        </view>
+      </view>
+      
+      <view class="cache-actions">
+        <button class="cache-btn clear-expired-btn" @click="clearExpiredCache">
+          清理过期缓存
+        </button>
+        <button class="cache-btn clear-all-btn" @click="clearAllCache">
+          清空所有缓存
+        </button>
+      </view>
+      
+      <view class="cache-tip">
+        <text class="tip-text">💡 缓存可以加快应用加载速度，建议定期清理过期缓存即可</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script>
 import { getApiUrl } from '@/utils/config.js'
+import { CacheManager, SongDetailCache, SearchResultCache, RankListCache } from '@/utils/cache.js'
 
 export default {
   data() {
     return {
       user: {},
       oldPassword: '',
-      newPassword: ''
+      newPassword: '',
+      cacheInfo: {
+        totalKeys: 0,
+        songDetailCount: 0,
+        searchResultCount: 0,
+        rankListCount: 0,
+        otherCount: 0
+      }
     }
   },
   onShow() {
     const userInfo = uni.getStorageSync('currentUser')
     if (userInfo) this.user = { ...userInfo }
+    // 加载缓存信息
+    this.loadCacheInfo()
   },
   methods: {
     // 修改头像
@@ -169,6 +216,61 @@ export default {
           }
         }
       });
+    },
+    
+    // 加载缓存信息
+    loadCacheInfo() {
+      const info = CacheManager.getInfo()
+      if (info) {
+        this.cacheInfo = info
+      }
+    },
+    
+    // 清理过期缓存
+    clearExpiredCache() {
+      uni.showLoading({ title: '清理中...' })
+      
+      setTimeout(() => {
+        const clearedCount = CacheManager.clearExpired()
+        uni.hideLoading()
+        
+        uni.showToast({
+          title: `清理了 ${clearedCount} 个过期缓存`,
+          icon: 'success'
+        })
+        
+        // 刷新缓存信息
+        this.loadCacheInfo()
+      }, 500)
+    },
+    
+    // 清空所有缓存
+    clearAllCache() {
+      uni.showModal({
+        title: '确认清空',
+        content: '清空所有缓存后，下次加载歌曲信息可能会稍慢。确定要清空吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.showLoading({ title: '清理中...' })
+            
+            setTimeout(() => {
+              // 清空各类缓存
+              SongDetailCache.clear()
+              SearchResultCache.clear()
+              RankListCache.clear()
+              
+              uni.hideLoading()
+              uni.showToast({
+                title: '缓存已清空',
+                icon: 'success'
+              })
+              
+              // 刷新缓存信息
+              this.loadCacheInfo()
+            }, 500)
+          }
+        }
+      })
     }
   }
 }
@@ -176,11 +278,13 @@ export default {
 
 <style scoped>
 .settings-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  padding: 30rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30rpx;
 }
 
 .settings-card {
@@ -271,5 +375,93 @@ export default {
 .logout-btn:active {
   transform: scale(0.97);
   opacity: 0.9;
+}
+
+/* 缓存管理样式 */
+.cache-card {
+  margin-bottom: 30rpx;
+}
+
+.cache-info {
+  margin: 30rpx 0;
+}
+
+.cache-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.cache-item:last-child {
+  border-bottom: none;
+  padding-top: 30rpx;
+  margin-top: 10rpx;
+  border-top: 2rpx solid #e0e0e0;
+}
+
+.cache-label {
+  font-size: 28rpx;
+  color: #555;
+}
+
+.cache-value {
+  font-size: 28rpx;
+  color: #42b983;
+  font-weight: bold;
+}
+
+.cache-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+}
+
+.cache-btn {
+  flex: 1;
+  height: 70rpx;
+  border: none;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  text-align: center;
+  line-height: 70rpx;
+  transition: all 0.2s;
+}
+
+.clear-expired-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 4rpx 10rpx rgba(102, 126, 234, 0.3);
+}
+
+.clear-expired-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.clear-all-btn {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  box-shadow: 0 4rpx 10rpx rgba(245, 87, 108, 0.3);
+}
+
+.clear-all-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.cache-tip {
+  margin-top: 30rpx;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 10rpx;
+  border-left: 4rpx solid #42b983;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.6;
 }
 </style>
