@@ -76,7 +76,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
-import { searchMusic } from '@/utils/api.js'
+import { searchMusic, getBatchSongDetails } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -111,15 +111,27 @@ export default {
 				
 				if (res.statusCode === 200 && res.data && res.data.result) {
 					const songs = res.data.result.songs || []
+					
+					// 先显示基础信息
 					this.newSongs = songs.map(song => ({
 						id: song.id,
 						name: song.name,
 						artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
 						albumName: song.album?.name || '未知专辑',
 						albumPic: song.album?.picUrl || song.album?.blurPicUrl || '/static/logo.png',
-						url: `http://music.163.com/song/media/outer/url?id=${song.id}.mp3`
+						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
 					}))
 					console.log('成功加载新歌:', this.newSongs.length, '首')
+					
+					// 批量获取歌曲详细信息（包含完整封面）
+					const songIds = songs.map(song => song.id)
+					const detailedSongs = await getBatchSongDetails(songIds)
+					
+					// 更新歌曲列表，使用详细信息中的封面
+					if (detailedSongs && detailedSongs.length > 0) {
+						this.newSongs = detailedSongs
+						console.log('成功获取歌曲封面:', detailedSongs.length, '首')
+					}
 				} else {
 					console.log('未获取到歌曲数据，响应:', res)
 					uni.showToast({
