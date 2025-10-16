@@ -17,12 +17,12 @@
 				</view>
 				<text class="action-text">搜索音乐</text>
 			</view>
-			<view class="action-item" @click="goToDaily">
-				<view class="action-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-					<text class="icon">📅</text>
-				</view>
-				<text class="action-text">每日推荐</text>
+		<view class="action-item" @click="goToCategory">
+			<view class="action-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+				<text class="icon">📅</text>
 			</view>
+			<text class="action-text">分类推荐</text>
+		</view>
 			<view class="action-item" @click="goToRank">
 				<view class="action-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
 					<text class="icon">📊</text>
@@ -155,18 +155,13 @@ export default {
 		
 	async loadNewSongs() {
 		try {
-			// 第一步：尝试从缓存加载
-			const cachedSongs = NewSongsCache.get()
-			if (cachedSongs && cachedSongs.length > 0) {
-				console.log(`✅ 新歌推荐从缓存加载 (共${cachedSongs.length}首)`)
-				this.newSongs = cachedSongs
-				uni.showToast({
-					title: '从缓存加载',
-					icon: 'success',
-					duration: 1000
-				})
-				return
-			}
+		// 第一步：尝试从缓存加载
+		const cachedSongs = NewSongsCache.get()
+		if (cachedSongs && cachedSongs.length > 0) {
+			console.log(`✅ 新歌推荐从缓存加载 (共${cachedSongs.length}首)`)
+			this.newSongs = cachedSongs
+			return
+		}
 			
 			// 第二步：从网络加载
 			console.log('🌐 新歌推荐从网络加载')
@@ -243,12 +238,12 @@ export default {
 			})
 		},
 		
-		goToDaily() {
-			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
-			})
-		},
+	goToCategory() {
+		uni.showToast({
+			title: '功能开发中',
+			icon: 'none'
+		})
+	},
 		
 	goToRank() {
 		uni.navigateTo({

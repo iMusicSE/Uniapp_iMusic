@@ -126,36 +126,30 @@ export default {
 		try {
 			this.loading = true
 			
-			// 第一步：尝试从缓存加载
-			const cached = PlaylistDetailCache.get(this.playlistId)
-			if (cached && cached.songList && cached.songList.length > 0) {
-				console.log(`✅ 歌单 ${this.playlistId} 从缓存加载 (含${cached.songList.length}首歌曲)`)
-				
-				this.playlist = {
-					id: cached.id,
-					name: cached.name,
-					cover: cached.cover,
-					playCount: cached.playCount,
-					description: cached.description,
-					tracks: cached.tracks || []
-				}
-				this.songList = cached.songList
-				this.fromCache = true
-				
-				// 设置页面标题
-				uni.setNavigationBarTitle({
-					title: this.playlist.name
-				})
-				
-				this.loading = false
-				
-				uni.showToast({
-					title: '从缓存加载',
-					icon: 'success',
-					duration: 1000
-				})
-				return
+		// 第一步：尝试从缓存加载
+		const cached = PlaylistDetailCache.get(this.playlistId)
+		if (cached && cached.songList && cached.songList.length > 0) {
+			console.log(`✅ 歌单 ${this.playlistId} 从缓存加载 (含${cached.songList.length}首歌曲)`)
+			
+			this.playlist = {
+				id: cached.id,
+				name: cached.name,
+				cover: cached.cover,
+				playCount: cached.playCount,
+				description: cached.description,
+				tracks: cached.tracks || []
 			}
+			this.songList = cached.songList
+			this.fromCache = true
+			
+			// 设置页面标题
+			uni.setNavigationBarTitle({
+				title: this.playlist.name
+			})
+			
+			this.loading = false
+			return
+		}
 			
 			// 第二步：从网络加载
 			console.log(`🌐 歌单 ${this.playlistId} 从网络加载`)
