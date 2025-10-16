@@ -82,15 +82,23 @@
 		    "enablePullDownRefresh": true
 		  }
 		},
-		{
-		  "path": "pages/playlist-list/playlist-list",
-		  "style": {
-		    "navigationBarTitleText": "我的歌单",
-		    "navigationBarBackgroundColor": "#667eea",
-		    "navigationBarTextStyle": "white",
-		    "enablePullDownRefresh": true
-		  }
-		}
+	{
+	  "path": "pages/playlist-list/playlist-list",
+	  "style": {
+	    "navigationBarTitleText": "我的歌单",
+	    "navigationBarBackgroundColor": "#667eea",
+	    "navigationBarTextStyle": "white",
+	    "enablePullDownRefresh": true
+	  }
+	},
+	{
+	  "path": "pages/ranking/ranking",
+	  "style": {
+	    "navigationBarTitleText": "排行榜",
+	    "navigationBarBackgroundColor": "#667eea",
+	    "navigationBarTextStyle": "white"
+	  }
+	}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",

@@ -245,9 +245,8 @@ goToCategoryRecommend() {
 },
 	
 goToRank() {
-	uni.showToast({
-		title: '功能开发中',
-		icon: 'none'
+	uni.navigateTo({
+		url: '/pages/ranking/ranking'
 	})
 },
 		
