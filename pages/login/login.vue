@@ -20,7 +20,9 @@
 </template>
 
 <script>
-import store from '@/store/index.js' 
+import store from '@/store/index.js'
+import { getApiUrl } from '@/utils/config.js'
+
 export default {
   data() {
     return {
@@ -35,7 +37,7 @@ export default {
       }
 
       const res = await uni.request({
-        url: 'http://localhost:3000/login',
+        url: getApiUrl('/login'),
         method: 'POST',
         data: {
           username: this.username,
@@ -47,21 +49,28 @@ export default {
         const user = res.data.user;
         uni.showToast({ title: '登录成功', icon: 'success' });
         
-		const [favRes, hisRes] = await Promise.all([
-		      uni.request({ url: `http://localhost:3000/favorites/${user.id}`, method: 'GET' }),
-		      uni.request({ url: `http://localhost:3000/history/${user.id}`, method: 'GET' })
-		    ]);
-		
-		    const fullUser = {
-		      ...user,
-		      favorites: (favRes.data.data || []).map(item => item.musicId),  
-		      history: (hisRes.data.data || []).map(item => item.musicId)     // 只保留 musicId
-		    };
-            store.commit('SET_USER_ID', user.id);
-			store.commit('SET_FAVORITES', fullUser.favorites);
-			store.commit('SET_HISTORY', fullUser.history);
-		
-		    uni.setStorageSync('currentUser', fullUser);
+		try {
+			const [favRes, hisRes] = await Promise.all([
+			      uni.request({ url: getApiUrl(`/favorites/${user.id}`), method: 'GET' }),
+			      uni.request({ url: getApiUrl(`/history/${user.id}`), method: 'GET' })
+			    ]);
+			
+			    const fullUser = {
+			      ...user,
+			      favorites: (favRes.data.data || []).map(item => item.musicId),  
+			      history: (hisRes.data.data || []).map(item => item.musicId)     // 只保留 musicId
+			    };
+	            store.commit('SET_USER_ID', user.id);
+				store.commit('SET_FAVORITES', fullUser.favorites);
+				store.commit('SET_HISTORY', fullUser.history);
+			
+			    uni.setStorageSync('currentUser', fullUser);
+		} catch (err) {
+			console.error('加载用户数据失败:', err);
+			// 即使加载数据失败，也允许登录
+			store.commit('SET_USER_ID', user.id);
+			uni.setStorageSync('currentUser', user);
+		}
 
         // 跳转到 discover 页面（tabBar 页面）
         setTimeout(() => {

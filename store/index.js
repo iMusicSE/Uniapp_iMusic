@@ -9,6 +9,8 @@ Vue.use(Vuex)
 import { createStore } from 'vuex'
 // #endif
 
+import { getApiUrl } from '@/utils/config.js'
+
 // #ifndef VUE3
 const store = new Vuex.Store({
 // #endif
@@ -215,7 +217,7 @@ const store = createStore({
 			if (!state.userId) return
 			try {
 				await uni.request({
-					url: 'http://localhost:3000/favorites/add',
+					url: getApiUrl('/favorites/add'),
 					method: 'POST',
 					data: { userId: state.userId, musicId: song.id }
 				})
@@ -228,7 +230,7 @@ const store = createStore({
 			if (!state.userId) return
 			try {
 				await uni.request({
-					url: 'http://localhost:3000/favorites/delete',
+					url: getApiUrl('/favorites/delete'),
 					method: 'POST',
 					data: { userId: state.userId, musicId: songId }
 				})
@@ -242,7 +244,7 @@ const store = createStore({
 			if (!state.userId) return
 			try {
 				await uni.request({
-					url: 'http://localhost:3000/favorites/clear',
+					url: getApiUrl('/favorites/clear'),
 					method: 'POST',
 					data: { userId: state.userId }
 				})
@@ -270,7 +272,7 @@ const store = createStore({
 			if (!state.userId) return
 			try {
 				await uni.request({
-					url: 'http://localhost:3000/history/add',
+					url: getApiUrl('/history/add'),
 					method: 'POST',
 					data: { userId: state.userId, musicId: song.id }
 				})
@@ -284,7 +286,7 @@ const store = createStore({
 			if (!state.userId) return
 			try {
 				await uni.request({
-					url: 'http://localhost:3000/history/clear',
+					url: getApiUrl('/history/clear'),
 					method: 'POST',
 					data: { userId: state.userId }
 				})

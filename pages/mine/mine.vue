@@ -88,6 +88,8 @@
 import { mapState } from 'vuex'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
+import { getApiUrl } from '@/utils/config.js'
+import { getBatchSongDetails } from '@/utils/api.js'
 
 export default {
   components: { MiniPlayer, SongList },
@@ -105,16 +107,31 @@ export default {
     const userInfo = uni.getStorageSync('currentUser')
     if (userInfo) this.user = { ...userInfo }
 
-    if (!userInfo || userInfo.isGuest) return
+    if (!userInfo || userInfo.isGuest) {
+      // 游客模式：加载本地存储的数据
+      this.loadLocalData()
+      return
+    }
 
     await this.loadUserData(userInfo.id)
   },
   methods: {
+    // 加载本地存储的数据（用于游客模式或网络失败时）
+    loadLocalData() {
+      try {
+        this.favorites = this.$store.state.favorites || []
+        this.history = this.$store.state.history || []
+        console.log('从本地加载数据:', this.favorites.length, this.history.length)
+      } catch (err) {
+        console.error('加载本地数据失败:', err)
+      }
+    },
+    
     async loadUserData(userId) {
       try {
         const [favRes, hisRes] = await Promise.all([
-          uni.request({ url: `http://localhost:3000/favorites/${userId}`, method: 'GET' }),
-          uni.request({ url: `http://localhost:3000/history/${userId}`, method: 'GET' })
+          uni.request({ url: getApiUrl(`/favorites/${userId}`), method: 'GET' }),
+          uni.request({ url: getApiUrl(`/history/${userId}`), method: 'GET' })
         ])
 
         const favoriteIds = (favRes.data?.data || []).map(i => i.musicId)
@@ -130,53 +147,16 @@ export default {
 		
       } catch (err) {
         console.error('加载用户收藏和历史失败:', err)
-        uni.showToast({ title: '加载失败', icon: 'none' })
+        // 网络请求失败时，尝试从本地存储加载
+        console.log('尝试从本地存储加载数据...')
+        this.loadLocalData()
+        uni.showToast({ title: '从本地加载数据', icon: 'none' })
       }
     },
 
     async fetchSongDetails(ids) {
-      if (!ids || ids.length === 0) return []
-
-      const results = []
-      for (const id of ids) {
-        try {
-          const res = await uni.request({
-            url: 'http://music.163.com/api/song/detail',
-            method: 'GET',
-            data: { ids: `[${id}]` },
-            header: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-              'Referer': 'http://music.163.com/'
-            }
-          })
-
-          if (res.statusCode === 200 && res.data?.songs?.length > 0) {
-            const song = res.data.songs[0]
-
-            // ✅ 防空处理 artistName、albumName、albumPic
-            const artistName = (song.ar && song.ar.length > 0)
-              ? song.ar.map(a => a.name).join(', ')
-              : (song.artists && song.artists.length > 0)
-                ? song.artists.map(a => a.name).join(', ')
-                : '未知歌手'
-
-            const albumName = song.al?.name || song.album?.name || '未知专辑'
-            const albumPic = song.al?.picUrl || song.album?.picUrl || '/static/logo.png'
-
-            results.push({
-              id:Number(song.id),
-              name: song.name,
-              artistName,
-              albumName,
-              albumPic,
-              url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
-            })
-          }
-        } catch (err) {
-          console.warn(`获取歌曲 ${id} 失败`, err)
-        }
-      }
-      return results
+      // 使用统一的 API 方法，支持跨域代理
+      return await getBatchSongDetails(ids)
     },
 
     goToSetting() {

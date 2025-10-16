@@ -17,6 +17,8 @@
 </template>
 
 <script>
+import { getApiUrl } from '@/utils/config.js'
+
 export default {
   data() {
     return {
@@ -36,7 +38,7 @@ export default {
       }
 
       const res = await uni.request({
-        url: 'http://localhost:3000/register',
+        url: getApiUrl('/register'),
         method: 'POST',
         data: {
           username: this.username,

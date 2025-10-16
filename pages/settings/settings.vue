@@ -36,6 +36,8 @@
 </template>
 
 <script>
+import { getApiUrl } from '@/utils/config.js'
+
 export default {
   data() {
     return {
@@ -56,7 +58,7 @@ export default {
         success: (res) => {
           const filePath = res.tempFilePaths[0];
           uni.uploadFile({
-            url: 'http://localhost:3000/uploadAvatar',
+            url: getApiUrl('/uploadAvatar'),
             filePath: filePath,
             name: 'avatar',
             formData: {
@@ -92,7 +94,7 @@ export default {
 
       if (this.newPassword) {
         uni.request({
-          url: 'http://localhost:3000/login',
+          url: getApiUrl('/login'),
           method: 'POST',
           data: {
             username: this.user.username,
@@ -117,7 +119,7 @@ export default {
     // 更新用户信息
     updateUser() {
       uni.request({
-        url: 'http://localhost:3000/updateUser',
+        url: getApiUrl('/updateUser'),
         method: 'POST',
         data: {
           id: this.user.id,
