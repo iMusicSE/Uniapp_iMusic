@@ -6,12 +6,25 @@
 		onLaunch: function() {
 			console.log('🚀 [DEBUG-应用] App Launch')
 			
-			// 检查本地存储的用户信息
-			const currentUser = uni.getStorageSync('currentUser')
-			console.log('  ├─ 本地存储的用户信息:', currentUser)
-			
-		if (currentUser && currentUser.id) {
-			console.log('  ├─ 恢复用户登录状态')
+		// 检查本地存储的用户信息
+		const currentUser = uni.getStorageSync('currentUser')
+		console.log('  ├─ 本地存储的用户信息:', currentUser)
+		
+	if (currentUser && currentUser.id) {
+		// 检查登录是否过期（一周 = 7天 = 7 * 24 * 60 * 60 * 1000 毫秒）
+		const ONE_WEEK = 7 * 24 * 60 * 60 * 1000
+		const currentTime = Date.now()
+		const loginTime = currentUser.loginTime || 0
+		const timeDiff = currentTime - loginTime
+		
+		console.log('  ├─ 登录时间检查:')
+		console.log('  │  ├─ 登录时间:', new Date(loginTime).toLocaleString())
+		console.log('  │  ├─ 当前时间:', new Date(currentTime).toLocaleString())
+		console.log('  │  └─ 已过时长:', Math.floor(timeDiff / (24 * 60 * 60 * 1000)), '天')
+		
+		if (timeDiff <= ONE_WEEK) {
+			// 登录状态在一周内，恢复登录状态
+			console.log('  ├─ ✅ 登录状态有效，恢复用户登录状态')
 			console.log('  ├─ 用户ID:', currentUser.id, '类型:', typeof currentUser.id)
 			store.commit('user/SET_USER_INFO', currentUser)
 			console.log('  └─ ✅ Vuex 用户信息已恢复:', {
@@ -20,10 +33,17 @@
 				isGuest: store.state.user.isGuest
 			})
 		} else {
-			console.log('  └─ ⚠️ 未找到登录用户信息，保持"未登录"状态')
-			// 确保初始化为未登录状态
+			// 登录已过期，清除登录状态
+			console.log('  ├─ ⚠️ 登录状态已过期（超过7天），清除登录信息')
+			uni.removeStorageSync('currentUser')
 			store.commit('user/CLEAR_USER_INFO')
+			console.log('  └─ 已清除过期的登录状态')
 		}
+	} else {
+		console.log('  └─ ⚠️ 未找到登录用户信息，保持"未登录"状态')
+		// 确保初始化为未登录状态
+		store.commit('user/CLEAR_USER_INFO')
+	}
 		
 		// 清理过期缓存
 		try {

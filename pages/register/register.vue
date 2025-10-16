@@ -1,17 +1,39 @@
 <template>
-  <view class="container">
-    <view class="title">注册账号</view>
+  <view class="register-container">
+    <view class="register-card">
+      <text class="title">📝 注册账号</text>
+      
+      <view class="form-section">
+        <!-- 用户名 -->
+        <view class="item">
+          <text class="label">👤 用户名</text>
+          <input v-model="username" placeholder="请输入用户名" class="input" />
+        </view>
 
-    <view class="input-group">
-      <input v-model="username" placeholder="请输入用户名" class="input-box" />
-      <input v-model="password" placeholder="请输入密码" class="input-box" password />
-      <input v-model="confirmPassword" placeholder="请确认密码" class="input-box" password />
-    </view>
+        <!-- 密码 -->
+        <view class="item">
+          <text class="label">🔒 密码</text>
+          <input v-model="password" placeholder="请输入密码" class="input" password />
+        </view>
 
-    <button class="main-btn" @click="register">立即注册</button>
-    <view class="footer">
-      <text>已有账号？</text>
-      <text class="link" @click="goLogin">去登录</text>
+        <!-- 确认密码 -->
+        <view class="item">
+          <text class="label">✅ 确认密码</text>
+          <input v-model="confirmPassword" placeholder="请确认密码" class="input" password />
+        </view>
+      </view>
+
+      <button class="register-btn" @click="register">立即注册</button>
+
+      <view class="footer">
+        <text class="footer-text">已有账号？</text>
+        <text class="link" @click="goLogin">去登录</text>
+      </view>
+      
+      <view class="tip-box">
+        <text class="tip-icon">💡</text>
+        <text class="tip-text">注册后即可同步收藏和播放历史</text>
+      </view>
     </view>
   </view>
 </template>
@@ -60,60 +82,119 @@ export default {
 };
 </script>
 
-<style>
-.container {
+<style scoped>
+.register-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  padding: 30rpx 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  padding: 60rpx;
-  background: linear-gradient(180deg, #f8f9fb, #e3e6eb);
+}
+
+.register-card {
+  width: 85%;
+  background-color: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.1);
+  padding: 50rpx 40rpx;
 }
 
 .title {
-  font-size: 48rpx;
+  text-align: center;
+  font-size: 40rpx;
   font-weight: bold;
   color: #333;
-  margin-bottom: 60rpx;
-}
-
-.input-group {
-  width: 100%;
   margin-bottom: 40rpx;
+  display: block;
 }
 
-.input-box {
-  width: 100%;
-  padding: 24rpx 32rpx;
-  margin-bottom: 20rpx;
-  border-radius: 40rpx;
-  background-color: #fff;
-  box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.08);
+.form-section {
+  margin-bottom: 30rpx;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30rpx;
+  border-bottom: 1rpx solid #eee;
+  padding-bottom: 20rpx;
+}
+
+.label {
   font-size: 30rpx;
-  border: none;
+  color: #555;
+  white-space: nowrap;
+  margin-right: 20rpx;
 }
 
-.main-btn {
+.input {
+  flex: 1;
+  text-align: right;
+  font-size: 28rpx;
+  border: none;
+  outline: none;
+  color: #333;
+  padding: 10rpx;
+}
+
+.register-btn {
   width: 100%;
-  padding: 28rpx;
-  text-align: center;
-  border-radius: 40rpx;
-  background: linear-gradient(90deg, #4f8ef7, #6fa8ff);
+  height: 80rpx;
+  background: linear-gradient(135deg, #42b983, #2e8b57);
   color: #fff;
+  border: none;
+  border-radius: 15rpx;
   font-size: 32rpx;
+  text-align: center;
+  line-height: 80rpx;
   margin-top: 20rpx;
-  box-shadow: 0 6rpx 10rpx rgba(0,0,0,0.1);
+  box-shadow: 0 6rpx 10rpx rgba(66, 185, 131, 0.3);
+  transition: all 0.2s;
+}
+
+.register-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
 }
 
 .footer {
   margin-top: 40rpx;
+  text-align: center;
+}
+
+.footer-text {
   font-size: 28rpx;
   color: #666;
 }
 
 .link {
-  color: #4f8ef7;
+  font-size: 28rpx;
+  color: #42b983;
   margin-left: 10rpx;
+  font-weight: bold;
+}
+
+.tip-box {
+  margin-top: 30rpx;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 10rpx;
+  border-left: 4rpx solid #42b983;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.tip-icon {
+  font-size: 32rpx;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.6;
 }
 </style>

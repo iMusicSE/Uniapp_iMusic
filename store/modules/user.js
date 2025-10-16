@@ -57,8 +57,12 @@ const actions = {
 	},
 	setUserInfo({ commit }, userInfo) {
 		commit('SET_USER_INFO', userInfo)
-		// 同步到本地存储
-		uni.setStorageSync('currentUser', userInfo)
+		// 同步到本地存储，添加登录时间戳
+		const userDataWithTimestamp = {
+			...userInfo,
+			loginTime: Date.now()  // 保存登录时间戳
+		}
+		uni.setStorageSync('currentUser', userDataWithTimestamp)
 	},
 	clearUserInfo({ commit }) {
 		commit('CLEAR_USER_INFO')
