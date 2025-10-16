@@ -164,7 +164,7 @@ export default {
     },
 
     goToRecent() {
-      uni.showToast({ title: '最近播放功能开发中', icon: 'none' })
+      uni.navigateTo({ url: '/pages/history/history' })
     },
 
     goToDownload() {
