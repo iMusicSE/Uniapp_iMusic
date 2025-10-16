@@ -51,6 +51,12 @@ export default {
 			default: false
 		}
 	},
+	data() {
+		return {
+			// 本地缓存：存储已加载详细信息的歌曲
+			enrichedSongsCache: {}
+		}
+	},
 	computed: {
 		...mapState(['currentSong']),
 		...mapGetters(['isFavorite'])
@@ -58,19 +64,21 @@ export default {
 	methods: {
 		...mapActions(['playSong', 'toggleFavorite', 'addToPlaylist']),
 		
-		// 播放歌曲 - 先获取详细信息确保封面完整
+		// 播放歌曲 - 按需加载详细信息
 		async handlePlay(song, index) {
 			try {
-				// 如果歌曲封面是默认图，需要获取详细信息
-				const needDetail = !song.albumPic || song.albumPic === '/static/logo.png'
+				// 检查缓存中是否已有详细信息
+				let songToPlay = this.enrichedSongsCache[song.id] || song
 				
-				let songToPlay = song
+				// 如果歌曲封面是默认图且未在缓存中，需要获取详细信息
+				const needDetail = (!songToPlay.albumPic || songToPlay.albumPic === '/static/logo.png') 
+					&& !this.enrichedSongsCache[song.id]
 				
 				if (needDetail) {
-					uni.showLoading({ title: '加载中...' })
+					uni.showLoading({ title: '加载中...', mask: true })
 					songToPlay = await this.enrichSongDetail(song)
-					// 更新当前列表中的歌曲信息
-					this.songs[index] = songToPlay
+					// 缓存详细信息
+					this.enrichedSongsCache[song.id] = songToPlay
 					uni.hideLoading()
 				}
 				
@@ -95,13 +103,17 @@ export default {
 				itemList: ['添加到播放列表', '下一首播放', '查看专辑', '分享'],
 				success: async (res) => {
 					if (res.tapIndex === 0) {
-						// 添加到播放列表
-						const enrichedSong = await this.enrichSongDetail(song)
+						// 添加到播放列表 - 按需加载详细信息
+						uni.showLoading({ title: '加载中...', mask: true })
+						const enrichedSong = await this.getEnrichedSong(song)
 						this.addToPlaylist(enrichedSong)
+						uni.hideLoading()
 					} else if (res.tapIndex === 1) {
-						// 下一首播放
-						const enrichedSong = await this.enrichSongDetail(song)
+						// 下一首播放 - 按需加载详细信息
+						uni.showLoading({ title: '加载中...', mask: true })
+						const enrichedSong = await this.getEnrichedSong(song)
 						this.playNext(enrichedSong)
+						uni.hideLoading()
 					} else if (res.tapIndex === 2) {
 						// 查看专辑
 						uni.showToast({
@@ -117,6 +129,19 @@ export default {
 					}
 				}
 			})
+		},
+		
+		// 获取完整歌曲信息（使用缓存）
+		async getEnrichedSong(song) {
+			// 如果缓存中已有，直接返回
+			if (this.enrichedSongsCache[song.id]) {
+				return this.enrichedSongsCache[song.id]
+			}
+			
+			// 否则获取并缓存
+			const enrichedSong = await this.enrichSongDetail(song)
+			this.enrichedSongsCache[song.id] = enrichedSong
+			return enrichedSong
 		},
 		
 		// 获取歌曲完整信息

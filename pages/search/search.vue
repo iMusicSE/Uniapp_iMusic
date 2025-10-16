@@ -103,7 +103,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
-import { searchMusic, getBatchSongDetails } from '@/utils/api.js'
+import { searchMusic } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -158,28 +158,17 @@ export default {
 				if (res.statusCode === 200 && res.data.result) {
 					const songs = res.data.result.songs || []
 					
-					// 先显示基础信息（使用默认封面）
+					// 只显示基础信息，不批量获取详细信息
+					// 详细信息将在用户点击播放或其他操作时按需加载
 					this.searchResults = songs.map(song => ({
 						id: song.id,
 						name: song.name,
 						artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
 						albumName: song.album?.name || song.al?.name || '未知专辑',
-						albumPic: '/static/logo.png', // 搜索接口不返回封面，统一使用默认图
+						albumPic: '/static/logo.png', // 使用默认封面，需要时再加载
 						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`,
 						vip: song.fee === 1
 					}))
-					
-					// 批量获取详细信息（包含完整封面）
-					const songIds = songs.map(song => song.id)
-					const detailedSongs = await this.getBatchSongDetails(songIds)
-					
-					// 更新为完整信息
-					if (detailedSongs && detailedSongs.length > 0) {
-						this.searchResults = detailedSongs.map(song => ({
-							...song,
-							vip: songs.find(s => s.id === song.id)?.fee === 1 || false
-						}))
-					}
 				} else {
 					this.searchResults = []
 				}
@@ -264,16 +253,6 @@ export default {
 					title: '该功能待扩展',
 					icon: 'none'
 				})
-			}
-		},
-		
-		// 批量获取歌曲详情
-		async getBatchSongDetails(songIds) {
-			try {
-				return await getBatchSongDetails(songIds)
-			} catch (error) {
-				console.error('批量获取歌曲详情失败:', error)
-				return []
 			}
 		}
 	}
