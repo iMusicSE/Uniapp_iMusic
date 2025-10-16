@@ -1,41 +1,41 @@
 <template>
-	<view class="rank-page">
+	<view class="category-recommend-page">
 		<!-- 页面标题 -->
 		<view class="page-header">
-			<text class="header-title">音乐排行榜</text>
-			<text class="header-subtitle">发现最热门的音乐</text>
+			<text class="header-title">分类推荐</text>
+			<text class="header-subtitle">发现不同风格的音乐</text>
 		</view>
 		
-		<!-- 排行榜列表 -->
-		<view class="rank-list">
+		<!-- 分类推荐列表 -->
+		<view class="category-list">
 			<view 
-				class="rank-card" 
-				v-for="(rank, index) in rankList" 
-				:key="rank.id"
-				@click="expandRank(rank)"
+				class="category-card" 
+				v-for="(category, index) in categoryList" 
+				:key="category.id"
+				@click="expandCategory(category)"
 			>
-				<!-- 榜单头部 -->
-				<view class="rank-header">
-					<view class="rank-icon" :style="{ background: rank.gradient }">
-						<text class="icon">{{ rank.icon }}</text>
+				<!-- 分类头部 -->
+				<view class="category-header">
+					<view class="category-icon" :style="{ background: category.gradient }">
+						<text class="icon">{{ category.icon }}</text>
 					</view>
-					<view class="rank-info">
-						<text class="rank-name">{{ rank.name }}</text>
-						<text class="rank-desc">{{ rank.desc }}</text>
-						<text class="update-time">{{ rank.updateTime }}</text>
+					<view class="category-info">
+						<text class="category-name">{{ category.name }}</text>
+						<text class="category-desc">{{ category.desc }}</text>
+						<text class="update-time">{{ category.updateTime }}</text>
 					</view>
-					<view class="rank-arrow">
-						<text class="arrow">{{ rank.expanded ? '▲' : '▼' }}</text>
+					<view class="category-arrow">
+						<text class="arrow">{{ category.expanded ? '▲' : '▼' }}</text>
 					</view>
 				</view>
 				
-				<!-- 榜单歌曲（展开时显示） -->
-				<view v-if="rank.expanded" class="rank-songs">
-					<view v-if="rank.loading" class="loading-box">
+				<!-- 分类歌曲（展开时显示） -->
+				<view v-if="category.expanded" class="category-songs">
+					<view v-if="category.loading" class="loading-box">
 						<text class="loading-text">加载中...</text>
 					</view>
-					<view v-else-if="rank.songs && rank.songs.length > 0">
-						<SongList :songs="rank.songs" :showCover="false" />
+					<view v-else-if="category.songs && category.songs.length > 0">
+						<SongList :songs="category.songs" :showCover="false" />
 					</view>
 					<view v-else class="empty-box">
 						<text class="empty-text">暂无数据</text>
@@ -43,10 +43,10 @@
 				</view>
 				
 				<!-- 预览（未展开时显示前3首） -->
-				<view v-if="!rank.expanded && rank.preview && rank.preview.length > 0" class="rank-preview">
+				<view v-if="!category.expanded && category.preview && category.preview.length > 0" class="category-preview">
 					<view 
 						class="preview-item" 
-						v-for="(song, idx) in rank.preview.slice(0, 3)" 
+						v-for="(song, idx) in category.preview.slice(0, 3)" 
 						:key="idx"
 					>
 						<text class="preview-index">{{ idx + 1 }}</text>
@@ -73,7 +73,7 @@ export default {
 	},
 	data() {
 		return {
-			rankList: [
+			categoryList: [
 				{
 					id: 1,
 					name: '🔥 华语热歌榜',
@@ -183,36 +183,36 @@ export default {
 	},
 	onLoad() {
 		// 页面加载时不自动加载任何数据，等用户点击时再加载
-		console.log('排行榜页面加载完成，等待用户交互')
+		console.log('分类推荐页面加载完成，等待用户交互')
 	},
 	methods: {
-		// 展开/收起排行榜 - 按需加载
-		async expandRank(rank) {
+		// 展开/收起分类 - 按需加载
+		async expandCategory(category) {
 			// 切换展开状态
-			rank.expanded = !rank.expanded
+			category.expanded = !category.expanded
 			
 			// 如果是展开且还没加载过数据，则加载
-			if (rank.expanded && rank.songs.length === 0) {
-				await this.loadRankSongs(rank)
+			if (category.expanded && category.songs.length === 0) {
+				await this.loadCategorySongs(category)
 			}
 		},
 		
-		// 加载排行榜歌曲 - 按需加载实现
-		async loadRankSongs(rank) {
-			rank.loading = true
+		// 加载分类歌曲 - 按需加载实现
+		async loadCategorySongs(category) {
+			category.loading = true
 			
 			try {
-				console.log(`开始加载 ${rank.name} 的歌曲`)
+				console.log(`开始加载 ${category.name} 的歌曲`)
 				
 				// 使用搜索API获取歌曲（只获取基础信息）
-				const res = await searchMusic(rank.keyword, 0, 20)
+				const res = await searchMusic(category.keyword, 0, 20)
 				
 				if (res.statusCode === 200 && res.data && res.data.result) {
 					const songs = res.data.result.songs || []
 					
 					// 只保存基础信息，使用默认封面
 					// 详细信息（如完整封面）在用户点击播放时才加载
-					rank.songs = songs.map(song => ({
+					category.songs = songs.map(song => ({
 						id: song.id,
 						name: song.name,
 						artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
@@ -222,43 +222,43 @@ export default {
 						vip: song.fee === 1
 					}))
 					
-					console.log(`${rank.name} 加载完成，共 ${rank.songs.length} 首歌曲`)
+					console.log(`${category.name} 加载完成，共 ${category.songs.length} 首歌曲`)
 					
 					// 更新预览列表
-					if (rank.songs.length > 0) {
-						rank.preview = rank.songs.slice(0, 3).map(song => song.name)
+					if (category.songs.length > 0) {
+						category.preview = category.songs.slice(0, 3).map(song => song.name)
 					}
 				} else {
-					console.log(`${rank.name} 未获取到数据`)
+					console.log(`${category.name} 未获取到数据`)
 					uni.showToast({
 						title: '暂无数据',
 						icon: 'none'
 					})
 				}
 			} catch (error) {
-				console.error(`${rank.name} 加载失败:`, error)
+				console.error(`${category.name} 加载失败:`, error)
 				uni.showToast({
 					title: '加载失败，请重试',
 					icon: 'none'
 				})
 			} finally {
-				rank.loading = false
+				category.loading = false
 			}
 		},
 		
-		// 刷新排行榜
-		async refreshRank(rank) {
-			rank.songs = []
-			await this.loadRankSongs(rank)
+		// 刷新分类推荐
+		async refreshCategory(category) {
+			category.songs = []
+			await this.loadCategorySongs(category)
 		}
 	},
 	
 	// 下拉刷新
 	onPullDownRefresh() {
-		// 刷新所有已展开的榜单
-		const promises = this.rankList
-			.filter(rank => rank.expanded)
-			.map(rank => this.refreshRank(rank))
+		// 刷新所有已展开的分类
+		const promises = this.categoryList
+			.filter(category => category.expanded)
+			.map(category => this.refreshCategory(category))
 		
 		Promise.all(promises).then(() => {
 			uni.stopPullDownRefresh()
@@ -272,7 +272,7 @@ export default {
 </script>
 
 <style scoped>
-.rank-page {
+.category-recommend-page {
 	min-height: 100vh;
 	background: #f5f5f5;
 	padding-bottom: 200rpx;
@@ -298,12 +298,12 @@ export default {
 	display: block;
 }
 
-/* 排行榜列表 */
-.rank-list {
+/* 分类推荐列表 */
+.category-list {
 	padding: 20rpx 20rpx 0;
 }
 
-.rank-card {
+.category-card {
 	background: white;
 	border-radius: 20rpx;
 	margin-bottom: 20rpx;
@@ -312,19 +312,19 @@ export default {
 	transition: transform 0.3s;
 }
 
-.rank-card:active {
+.category-card:active {
 	transform: scale(0.98);
 }
 
-/* 榜单头部 */
-.rank-header {
+/* 分类头部 */
+.category-header {
 	display: flex;
 	align-items: center;
 	padding: 30rpx;
 	gap: 20rpx;
 }
 
-.rank-icon {
+.category-icon {
 	width: 100rpx;
 	height: 100rpx;
 	border-radius: 20rpx;
@@ -336,20 +336,20 @@ export default {
 	flex-shrink: 0;
 }
 
-.rank-info {
+.category-info {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
 	gap: 8rpx;
 }
 
-.rank-name {
+.category-name {
 	font-size: 32rpx;
 	font-weight: bold;
 	color: #333;
 }
 
-.rank-desc {
+.category-desc {
 	font-size: 24rpx;
 	color: #999;
 }
@@ -360,7 +360,7 @@ export default {
 	margin-top: 5rpx;
 }
 
-.rank-arrow {
+.category-arrow {
 	width: 60rpx;
 	height: 60rpx;
 	display: flex;
@@ -376,7 +376,7 @@ export default {
 }
 
 /* 预览列表 */
-.rank-preview {
+.category-preview {
 	padding: 0 30rpx 30rpx;
 	border-top: 1rpx solid #f0f0f0;
 	margin-top: 10rpx;
@@ -407,8 +407,8 @@ export default {
 	white-space: nowrap;
 }
 
-/* 榜单歌曲 */
-.rank-songs {
+/* 分类歌曲 */
+.category-songs {
 	border-top: 1rpx solid #f0f0f0;
 	margin-top: 10rpx;
 }

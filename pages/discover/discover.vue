@@ -17,18 +17,18 @@
 				</view>
 				<text class="action-text">搜索音乐</text>
 			</view>
-		<view class="action-item" @click="goToCategory">
-			<view class="action-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-				<text class="icon">📅</text>
-			</view>
-			<text class="action-text">分类推荐</text>
+	<view class="action-item" @click="goToCategoryRecommend">
+		<view class="action-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+			<text class="icon">📅</text>
 		</view>
-			<view class="action-item" @click="goToRank">
-				<view class="action-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-					<text class="icon">📊</text>
-				</view>
-				<text class="action-text">排行榜</text>
+		<text class="action-text">分类推荐</text>
+	</view>
+		<view class="action-item" @click="goToRank">
+			<view class="action-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+				<text class="icon">📊</text>
 			</view>
+			<text class="action-text">排行榜</text>
+		</view>
 			<view class="action-item" @click="goToRadio">
 				<view class="action-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
 					<text class="icon">📻</text>
@@ -238,18 +238,18 @@ export default {
 			})
 		},
 		
-	goToCategory() {
-		uni.showToast({
-			title: '功能开发中',
-			icon: 'none'
-		})
-	},
-		
-	goToRank() {
-		uni.navigateTo({
-			url: '/pages/rank/rank'
-		})
-	},
+goToCategoryRecommend() {
+	uni.navigateTo({
+		url: '/pages/category-recommend/category-recommend'
+	})
+},
+	
+goToRank() {
+	uni.showToast({
+		title: '功能开发中',
+		icon: 'none'
+	})
+},
 		
 		goToRadio() {
 			uni.showToast({
