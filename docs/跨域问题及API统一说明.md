@@ -64,18 +64,28 @@
 
 #### 使用统一代理的 API（通过 `utils/api.js`）
 - ✅ `/api/search/get/web` - 搜索音乐（支持H5代理）
+  - ⚠️ **注意**：搜索接口不返回完整的歌曲封面信息
 - ✅ `/api/song/lyric` - 获取歌词（支持H5代理）
 - ✅ `/api/song/detail` - 获取歌曲详情（支持H5代理）
+  - ✅ **用途**：获取完整的歌曲信息，包括专辑封面
+
+#### 封面获取方案 🖼️
+由于搜索接口不返回完整的封面信息，应用采用以下策略：
+
+**策略流程：**
+1. **搜索/列表展示**：先显示默认封面（`/static/logo.png`）
+2. **批量获取详情**：调用 `getBatchSongDetails()` 批量获取歌曲详细信息
+3. **更新封面**：用详情接口返回的 `albumPic` 更新列表
+
+**实现位置：**
+- `pages/search/search.vue` - 搜索结果页批量获取封面
+- `pages/discover/discover.vue` - 发现页批量获取封面
+- `components/SongList.vue` - 点击播放时单独获取封面（兜底方案）
+- `utils/api.js` - `getBatchSongDetails()` 方法实现批量获取
 
 #### 音频播放链接（不需要代理）
 以下是直接的音频文件链接，浏览器可以直接播放，不存在跨域问题：
 - `https://music.163.com/song/media/outer/url?id={songId}.mp3`
-
-位置：
-- `utils/api.js` (getBatchSongDetails方法)
-- `pages/index/index.vue`
-- `pages/discover/discover.vue`
-- `pages/search/search.vue`
 
 ## 📊 统一性检查结果
 
