@@ -85,12 +85,13 @@ export default {
 		}
 	},
 	computed: {
-		...mapState(['history', 'userId']),
-		...mapGetters(['getHistory'])
+		...mapState('history', ['history']),
+		...mapState('user', ['userId']),
+		...mapGetters('history', ['getHistory'])
 	},
 	watch: {
 		// 监听 Vuex 中的 history 变化，同步统计数据
-		'$store.state.history': {
+		'$store.state.history.history': {
 			handler(newHistory) {
 				if (!this.isLoading) {
 					this.calculateTodayCount()
@@ -132,7 +133,7 @@ export default {
 			}
 			
 			// 播放第一首，并将整个历史列表作为播放列表
-			this.$store.dispatch('playSong', {
+			this.$store.dispatch('player/playSong', {
 				song: this.history[0],
 				playlist: this.history
 			})
@@ -148,7 +149,7 @@ export default {
 				success: async (res) => {
 					if (res.confirm) {
 						try {
-							await this.$store.dispatch('clearHistory')
+							await this.$store.dispatch('history/clearHistory')
 							uni.showToast({ title: '已清空播放历史', icon: 'success' })
 						} catch (err) {
 							console.error('清空历史失败', err)

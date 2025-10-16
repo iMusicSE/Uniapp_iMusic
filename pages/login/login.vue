@@ -69,22 +69,25 @@ export default {
 			      history: (hisRes.data.data || []).map(item => item.musicId)     // 只保留 musicId
 			    };
 			
-			console.log('  ├─ 准备设置Vuex中的userId...');
-	        store.commit('SET_USER_ID', user.id);
-			console.log('  ├─ ✅ Vuex userId已设置:', store.state.userId);
-			
-			store.commit('SET_FAVORITES', fullUser.favorites);
-			store.commit('SET_HISTORY', fullUser.history);
-			
-			    uni.setStorageSync('currentUser', fullUser);
-			console.log('  └─ ✅ 用户数据已保存到本地存储');
-		} catch (err) {
-			console.error('  └─ ❌ 加载用户数据失败:', err);
-			// 即使加载数据失败，也允许登录
-			store.commit('SET_USER_ID', user.id);
-			console.log('  └─ ⚠️ 已设置userId（忽略数据加载失败）:', store.state.userId);
-			uni.setStorageSync('currentUser', user);
-		}
+		console.log('  ├─ 准备设置Vuex中的userId...');
+        store.commit('user/SET_USER_ID', user.id);
+		console.log('  ├─ ✅ Vuex userId已设置:', store.state.user.userId);
+		
+		store.commit('favorites/SET_FAVORITES', fullUser.favorites);
+		store.commit('history/CLEAR_HISTORY');
+		fullUser.history.forEach(musicId => {
+			store.commit('history/ADD_HISTORY', { id: musicId });
+		});
+		
+		    uni.setStorageSync('currentUser', fullUser);
+		console.log('  └─ ✅ 用户数据已保存到本地存储');
+	} catch (err) {
+		console.error('  └─ ❌ 加载用户数据失败:', err);
+		// 即使加载数据失败，也允许登录
+		store.commit('user/SET_USER_ID', user.id);
+		console.log('  └─ ⚠️ 已设置userId（忽略数据加载失败）:', store.state.user.userId);
+		uni.setStorageSync('currentUser', user);
+	}
 
         // 跳转到 discover 页面（tabBar 页面）
         setTimeout(() => {

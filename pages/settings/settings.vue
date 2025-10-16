@@ -158,9 +158,9 @@ export default {
     
             // ✅ 清空 Vuex 状态
             const store = this.$store;
-            store.commit('CLEAR_FAVORITES');
-            store.commit('CLEAR_HISTORY');
-            store.commit('SET_USER_ID', null);
+            store.commit('favorites/CLEAR_FAVORITES');
+            store.commit('history/CLEAR_HISTORY');
+            store.commit('user/SET_USER_ID', null);
     
             // ✅ 跳转登录页
             uni.reLaunch({

@@ -149,7 +149,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(['playlist'])
+    ...mapState('player', ['playlist'])
   },
   async onShow() {
     const userInfo = uni.getStorageSync('currentUser')
@@ -167,8 +167,8 @@ export default {
     // 加载本地存储的数据（用于游客模式或网络失败时）
     loadLocalData() {
       try {
-        this.favorites = this.$store.state.favorites || []
-        this.history = this.$store.state.history || []
+        this.favorites = this.$store.state.favorites.favorites || []
+        this.history = this.$store.state.history.history || []
         console.log('从本地加载数据:', this.favorites.length, this.history.length)
       } catch (err) {
         console.error('加载本地数据失败:', err)
@@ -203,7 +203,7 @@ export default {
         this.failedFavoritesCount = favResult.failedCount
         this.failedFavoriteIds = favResult.failed || [] // 保存失败的ID
         this.favorites.forEach(f => f.isFavorite = true)
-        this.$store.commit('SET_FAVORITES', this.favorites)
+        this.$store.commit('favorites/SET_FAVORITES', this.favorites)
         this.loadingFavorites = false
         
         console.log(`✅ 收藏加载完成 - 成功: ${favResult.successCount}首, 失败: ${favResult.failedCount}首`)
@@ -218,8 +218,8 @@ export default {
         this.history = hisResult.songs
         this.failedHistoryCount = hisResult.failedCount
         this.failedHistoryIds = hisResult.failed || [] // 保存失败的ID
-        this.$store.commit('CLEAR_HISTORY') // 先清空
-        this.history.forEach(h => this.$store.commit('ADD_HISTORY', h)) // 加入历史
+        this.$store.commit('history/CLEAR_HISTORY') // 先清空
+        this.history.forEach(h => this.$store.commit('history/ADD_HISTORY', h)) // 加入历史
         this.loadingHistory = false
         
         console.log(`✅ 历史加载完成 - 成功: ${hisResult.successCount}首, 失败: ${hisResult.failedCount}首`)
@@ -298,7 +298,7 @@ export default {
         
         // 更新 Vuex
         this.favorites.forEach(f => f.isFavorite = true)
-        this.$store.commit('SET_FAVORITES', this.favorites)
+        this.$store.commit('favorites/SET_FAVORITES', this.favorites)
         
         if (retryResult.failedCount === 0) {
           uni.showToast({ title: '重新加载成功', icon: 'success' })
@@ -335,7 +335,7 @@ export default {
         this.failedHistoryCount = retryResult.failedCount
         
         // 更新 Vuex
-        retryResult.songs.forEach(h => this.$store.commit('ADD_HISTORY', h))
+        retryResult.songs.forEach(h => this.$store.commit('history/ADD_HISTORY', h))
         
         if (retryResult.failedCount === 0) {
           uni.showToast({ title: '重新加载成功', icon: 'success' })
@@ -363,9 +363,9 @@ export default {
              if (res.confirm) {
                try {
                  // 调用 Vuex 全局 action
-                 await this.$store.dispatch('clearFavorites')
+                 await this.$store.dispatch('favorites/clearFavorites')
                  // 页面数据同步
-                 this.favorites = this.$store.state.favorites
+                 this.favorites = this.$store.state.favorites.favorites
                } catch (err) {
                  console.error('清空收藏失败', err)
                  uni.showToast({ title: '清空收藏失败', icon: 'none' })
@@ -383,8 +383,8 @@ export default {
            success: async (res) => {
              if (res.confirm) {
                try {
-                 await this.$store.dispatch('clearHistory')
-                 this.history = this.$store.state.history
+                 await this.$store.dispatch('history/clearHistory')
+                 this.history = this.$store.state.history.history
                } catch (err) {
                  console.error('清空历史失败', err)
                  uni.showToast({ title: '清空历史失败', icon: 'none' })

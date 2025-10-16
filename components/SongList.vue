@@ -58,11 +58,15 @@ export default {
 		}
 	},
 	computed: {
-		...mapState(['currentSong']),
-		...mapGetters(['isFavorite'])
+		...mapState('player', ['currentSong']),
+		...mapGetters('favorites', ['isFavorite'])
 	},
 	methods: {
-		...mapActions(['playSong', 'toggleFavorite', 'addToPlaylist']),
+		...mapActions({
+			playSong: 'player/playSong',
+			toggleFavorite: 'favorites/toggleFavorite',
+			addToPlaylist: 'player/addToPlaylist'
+		}),
 		
 		// 播放歌曲 - 按需加载详细信息
 		async handlePlay(song, index) {
@@ -184,7 +188,7 @@ export default {
 		
 		// 下一首播放（插入到当前歌曲后面）
 		playNext(song) {
-			this.$store.dispatch('insertToPlaylist', song)
+			this.$store.dispatch('player/insertToPlaylist', song)
 		}
 	}
 }

@@ -82,7 +82,7 @@ export default {
 		}
 	},
 	computed: {
-		...mapState(['playlist', 'currentIndex', 'playMode', 'isPlaying']),
+		...mapState('player', ['playlist', 'currentIndex', 'playMode', 'isPlaying']),
 		
 		playModeIcon() {
 			const icons = ['🔁', '🔂', '🔀']
@@ -95,7 +95,10 @@ export default {
 		}
 	},
 	methods: {
-		...mapActions(['togglePlayMode', 'playSong']),
+		...mapActions({
+			togglePlayMode: 'player/togglePlayMode',
+			playSong: 'player/playSong'
+		}),
 		
 		close() {
 			this.$emit('close')
@@ -105,10 +108,10 @@ export default {
 		playSongByIndex(index) {
 			if (index === this.currentIndex && this.isPlaying) {
 				// 如果点击当前正在播放的歌曲，则暂停
-				this.$store.dispatch('togglePlay')
+				this.$store.dispatch('player/togglePlay')
 			} else {
 				// 播放指定歌曲
-				this.$store.commit('SET_CURRENT_INDEX', index)
+				this.$store.commit('player/SET_CURRENT_INDEX', index)
 				const song = this.playlist[index]
 				this.playSong({ song })
 			}
@@ -116,7 +119,7 @@ export default {
 		
 		// 从播放列表移除歌曲
 		removeSong(index) {
-			this.$store.dispatch('removeFromPlaylist', index)
+			this.$store.dispatch('player/removeFromPlaylist', index)
 		},
 		
 		// 清空播放列表
@@ -126,7 +129,7 @@ export default {
 				content: '确定要清空播放列表吗？',
 				success: (res) => {
 					if (res.confirm) {
-						this.$store.dispatch('clearPlaylist')
+						this.$store.dispatch('player/clearPlaylist')
 						this.close()
 					}
 				}

@@ -121,8 +121,8 @@ export default {
 		}
 	},
 	computed: {
-		...mapState(['currentSong', 'isPlaying', 'currentTime', 'duration', 'playMode', 'audioContext']),
-		...mapGetters(['isFavorite']),
+		...mapState('player', ['currentSong', 'isPlaying', 'currentTime', 'duration', 'playMode', 'audioContext']),
+		...mapGetters('favorites', ['isFavorite']),
 		
 		playModeIcon() {
 			const icons = ['🔁', '🔂', '🔀']
@@ -147,13 +147,19 @@ export default {
 		// 监听音频上下文更新
 		if (this.audioContext) {
 			this.audioContext.onTimeUpdate(() => {
-				this.$store.commit('SET_CURRENT_TIME', this.audioContext.currentTime)
-				this.$store.commit('SET_DURATION', this.audioContext.duration)
+				this.$store.commit('player/SET_CURRENT_TIME', this.audioContext.currentTime)
+				this.$store.commit('player/SET_DURATION', this.audioContext.duration)
 			})
 		}
 	},
 	methods: {
-		...mapActions(['togglePlay', 'playNext', 'playPrevious', 'togglePlayMode', 'toggleFavorite']),
+		...mapActions({
+			togglePlay: 'player/togglePlay',
+			playNext: 'player/playNext',
+			playPrevious: 'player/playPrevious',
+			togglePlayMode: 'player/togglePlayMode',
+			toggleFavorite: 'favorites/toggleFavorite'
+		}),
 		
 		goBack() {
 			uni.navigateBack()
@@ -305,7 +311,7 @@ export default {
 		
 		// 进度条拖动中
 		onSliderChanging(e) {
-			this.$store.commit('SET_CURRENT_TIME', e.detail.value)
+			this.$store.commit('player/SET_CURRENT_TIME', e.detail.value)
 		},
 		
 		// 进度条拖动结束

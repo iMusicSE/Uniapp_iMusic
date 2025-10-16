@@ -34,7 +34,7 @@ import { mapState, mapActions } from 'vuex'
 export default {
 	name: 'MiniPlayer',
 	computed: {
-		...mapState(['currentSong', 'isPlaying', 'currentTime', 'duration']),
+		...mapState('player', ['currentSong', 'isPlaying', 'currentTime', 'duration']),
 		
 		progressPercent() {
 			if (this.duration === 0) return 0
@@ -42,7 +42,10 @@ export default {
 		}
 	},
 	methods: {
-		...mapActions(['togglePlay', 'playNext']),
+		...mapActions({
+			togglePlay: 'player/togglePlay',
+			playNext: 'player/playNext'
+		}),
 		
 		goToPlayer() {
 			uni.navigateTo({
