@@ -9,7 +9,9 @@ const state = {
 	currentIndex: 0,
 	playMode: 0, // 0: 列表循环, 1: 单曲循环, 2: 随机播放
 	currentTime: 0,
-	duration: 0
+	duration: 0,
+	shuffledIndexes: [], // 随机播放模式下的打乱索引顺序
+	shuffledPosition: 0  // 在打乱序列中的当前位置
 }
 
 const getters = {
@@ -73,6 +75,19 @@ const mutations = {
 		}
 		const insertIndex = state.currentIndex + 1
 		state.playlist.splice(insertIndex, 0, song)
+	},
+	GENERATE_SHUFFLED_INDEXES(state) {
+		// 生成打乱的索引数组
+		const indexes = Array.from({ length: state.playlist.length }, (_, i) => i)
+		// Fisher-Yates 洗牌算法
+		for (let i = indexes.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[indexes[i], indexes[j]] = [indexes[j], indexes[i]]
+		}
+		state.shuffledIndexes = indexes
+		// 找到当前歌曲在打乱序列中的位置
+		state.shuffledPosition = indexes.indexOf(state.currentIndex)
+		if (state.shuffledPosition === -1) state.shuffledPosition = 0
 	}
 }
 
@@ -133,6 +148,10 @@ const actions = {
 			commit('SET_PLAYLIST', playlist)
 			const index = playlist.findIndex(item => item.id === enrichedSong.id)
 			commit('SET_CURRENT_INDEX', index >= 0 ? index : 0)
+			// 如果是随机播放模式，重新生成打乱的播放顺序
+			if (state.playMode === 2) {
+				commit('GENERATE_SHUFFLED_INDEXES')
+			}
 		}
 
 		console.log('  ├─ 准备添加到播放历史并同步到数据库...')
@@ -161,8 +180,21 @@ const actions = {
 
 	playPrevious({ commit, state, dispatch }) {
 		if (state.playlist.length === 0) return
-		let newIndex = state.currentIndex - 1
-		if (newIndex < 0) newIndex = state.playlist.length - 1
+		let newIndex
+		if (state.playMode === 2) {
+			// 随机播放：按打乱的顺序向前播放
+			if (state.shuffledIndexes.length === 0) {
+				commit('GENERATE_SHUFFLED_INDEXES')
+			}
+			const prevShuffledPosition = state.shuffledPosition - 1 < 0 
+				? state.shuffledIndexes.length - 1 
+				: state.shuffledPosition - 1
+			state.shuffledPosition = prevShuffledPosition
+			newIndex = state.shuffledIndexes[prevShuffledPosition]
+		} else {
+			newIndex = state.currentIndex - 1
+			if (newIndex < 0) newIndex = state.playlist.length - 1
+		}
 		commit('SET_CURRENT_INDEX', newIndex)
 		dispatch('playSong', { song: state.playlist[newIndex] })
 	},
@@ -171,7 +203,13 @@ const actions = {
 		if (state.playlist.length === 0) return
 		let newIndex
 		if (state.playMode === 2) {
-			newIndex = Math.floor(Math.random() * state.playlist.length)
+			// 随机播放：按打乱的顺序播放
+			if (state.shuffledIndexes.length === 0) {
+				commit('GENERATE_SHUFFLED_INDEXES')
+			}
+			const nextShuffledPosition = (state.shuffledPosition + 1) % state.shuffledIndexes.length
+			state.shuffledPosition = nextShuffledPosition
+			newIndex = state.shuffledIndexes[nextShuffledPosition]
 		} else {
 			newIndex = state.currentIndex + 1
 			if (newIndex >= state.playlist.length) newIndex = 0
@@ -183,6 +221,10 @@ const actions = {
 	togglePlayMode({ commit, state }) {
 		const newMode = (state.playMode + 1) % 3
 		commit('SET_PLAY_MODE', newMode)
+		// 切换到随机播放模式时，生成打乱的播放顺序
+		if (newMode === 2 && state.playlist.length > 0) {
+			commit('GENERATE_SHUFFLED_INDEXES')
+		}
 		const modeText = ['列表循环', '单曲循环', '随机播放']
 		uni.showToast({ title: modeText[newMode], icon: 'none', duration: 1500 })
 	},
