@@ -63,6 +63,48 @@ export function getSongDetail(songId) {
 	})
 }
 
+// 获取歌单详情
+export function getPlaylistDetail(playlistId) {
+	return uni.request({
+		url: `${getBaseURL()}/playlist/detail`,
+		method: 'GET',
+		data: {
+			id: playlistId
+		},
+		header: getHeaders()
+	})
+}
+
+// 批量获取歌单详情
+export async function getBatchPlaylistDetails(playlistIds) {
+	if (!playlistIds || playlistIds.length === 0) return []
+	
+	try {
+		const requests = playlistIds.map(id => getPlaylistDetail(id))
+		const responses = await Promise.all(requests)
+		
+		const playlists = []
+		responses.forEach(res => {
+			if (res.statusCode === 200 && res.data?.result) {
+				const playlist = res.data.result
+				playlists.push({
+					id: playlist.id,
+					name: playlist.name,
+					cover: playlist.coverImgUrl || '/static/logo.png',
+					playCount: playlist.playCount || 0,
+					description: playlist.description || '',
+					tracks: playlist.tracks || []
+				})
+			}
+		})
+		
+		return playlists
+	} catch (error) {
+		console.error('批量获取歌单失败:', error)
+		return []
+	}
+}
+
 // 批量获取歌曲详情（优化版：并行请求 + 重试机制）
 export async function getBatchSongDetails(songIds, onProgress) {
 	if (!songIds || songIds.length === 0) return { songs: [], failed: [] }
@@ -162,6 +204,8 @@ export default {
 	getLyrics,
 	getSongDetail,
 	getBatchSongDetails,
+	getPlaylistDetail,
+	getBatchPlaylistDetails,
 	getBaseURL
 }
 

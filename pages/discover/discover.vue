@@ -46,10 +46,12 @@
 			<scroll-view class="playlist-scroll" scroll-x>
 				<view class="playlist-list">
 					<view class="playlist-item" v-for="playlist in playlists" :key="playlist.id" @click="goToPlaylist(playlist)">
-						<image class="playlist-cover" :src="playlist.cover" mode="aspectFill"></image>
-						<view class="play-count">
-							<text class="icon">▶</text>
-							<text>{{ formatPlayCount(playlist.playCount) }}</text>
+						<view class="playlist-cover-wrapper">
+							<image class="playlist-cover" :src="playlist.cover" mode="aspectFill"></image>
+							<view class="play-count">
+								<text class="icon">▶</text>
+								<text>{{ formatPlayCount(playlist.playCount) }}</text>
+							</view>
 						</view>
 						<text class="playlist-name">{{ playlist.name }}</text>
 					</view>
@@ -76,7 +78,7 @@
 <script>
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
-import { searchMusic, getBatchSongDetails } from '@/utils/api.js'
+import { searchMusic, getBatchSongDetails, getBatchPlaylistDetails } from '@/utils/api.js'
 
 export default {
 	components: {
@@ -90,20 +92,41 @@ export default {
 				{ id: 2, image: '/static/logo.png' },
 				{ id: 3, image: '/static/logo.png' }
 			],
-			playlists: [
-				{ id: 1, name: '华语热歌榜', cover: '/static/logo.png', playCount: 12345678 },
-				{ id: 2, name: '欧美流行', cover: '/static/logo.png', playCount: 9876543 },
-				{ id: 3, name: '日韩精选', cover: '/static/logo.png', playCount: 5678901 },
-				{ id: 4, name: '经典老歌', cover: '/static/logo.png', playCount: 3456789 },
-				{ id: 5, name: '轻音乐', cover: '/static/logo.png', playCount: 2345678 }
-			],
-			newSongs: []
+			playlists: [],
+			newSongs: [],
+			// 推荐歌单ID列表
+			playlistIds: [1997190595, 14096260145, 5017390341, 2374577728]
 		}
 	},
 	onLoad() {
+		this.loadPlaylists()
 		this.loadNewSongs()
 	},
 	methods: {
+		async loadPlaylists() {
+			try {
+				console.log('开始加载推荐歌单...')
+				const playlists = await getBatchPlaylistDetails(this.playlistIds)
+				
+				if (playlists && playlists.length > 0) {
+					this.playlists = playlists
+					console.log('成功加载推荐歌单:', playlists.length, '个')
+				} else {
+					console.log('未获取到歌单数据')
+					uni.showToast({
+						title: '暂无歌单数据',
+						icon: 'none'
+					})
+				}
+			} catch (error) {
+				console.error('加载歌单失败:', error)
+				uni.showToast({
+					title: '加载失败，请重试',
+					icon: 'none'
+				})
+			}
+		},
+		
 		async loadNewSongs() {
 			// 使用统一的API方法，支持跨域代理
 			try {
@@ -301,11 +324,16 @@ export default {
 	width: 220rpx;
 }
 
-.playlist-cover {
+.playlist-cover-wrapper {
+	position: relative;
 	width: 220rpx;
 	height: 220rpx;
+}
+
+.playlist-cover {
+	width: 100%;
+	height: 100%;
 	border-radius: 16rpx;
-	position: relative;
 }
 
 .play-count {
