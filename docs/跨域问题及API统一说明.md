@@ -111,11 +111,15 @@
 ### 后端服务器（localhost:3000）
 ```javascript
 // iMusic-server/server.js
+// 开发/测试环境 - 最宽松配置（允许所有来源访问）
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: true, // 允许所有来源（动态返回请求的origin）
+  credentials: true, // 允许携带凭证
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: '*', // 允许所有请求头
+  exposedHeaders: '*', // 暴露所有响应头给前端
+  maxAge: 86400, // 预检请求缓存时间（24小时）
+  optionsSuccessStatus: 200 // 兼容旧浏览器
 }));
 ```
 
@@ -168,6 +172,15 @@ export function getApiUrl(path) {
 - 配置 Nginx 反向代理
 - 或使用后端服务转发
 - 或使用支持 CORS 的第三方 API
+- ⚠️ **重要**：生产环境建议收紧 CORS 配置，限制允许访问的域名：
+  ```javascript
+  app.use(cors({
+    origin: ['https://your-domain.com'], // 仅允许特定域名
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+  ```
 
 #### 3. 游客模式
 游客模式下：
