@@ -44,10 +44,10 @@
 				<text class="menu-icon">📻</text>
 				<text class="menu-text">我的电台</text>
 			</view>
-			<view class="menu-item" @click="goToCollection">
-				<text class="menu-icon">📁</text>
-				<text class="menu-text">收藏专辑</text>
-			</view>
+		<view class="menu-item" @click="goToPlaylist">
+			<text class="menu-icon">📁</text>
+			<text class="menu-text">我的歌单</text>
+		</view>
 		</view>
 		
 		<!-- 我的收藏 -->
@@ -286,8 +286,8 @@ export default {
       uni.showToast({ title: '我的电台功能开发中', icon: 'none' })
     },
 
-      goToCollection() {
-      uni.showToast({ title: '收藏专辑功能开发中', icon: 'none' })
+      goToPlaylist() {
+      uni.navigateTo({ url: '/pages/playlist-list/playlist-list' })
     },
     
     goToLogin() {

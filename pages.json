@@ -66,12 +66,30 @@
 		        "navigationBarTitleText": "注册"
 		      }
 		    },
-			{
-			  "path": "pages/settings/settings",
-			  "style": {
-			    "navigationBarTitleText": "设置"
-			  }
-			}
+		{
+		  "path": "pages/settings/settings",
+		  "style": {
+		    "navigationBarTitleText": "设置"
+		  }
+		},
+		{
+		  "path": "pages/playlist-detail/playlist-detail",
+		  "style": {
+		    "navigationBarTitleText": "歌单详情",
+		    "navigationBarBackgroundColor": "#667eea",
+		    "navigationBarTextStyle": "white",
+		    "enablePullDownRefresh": true
+		  }
+		},
+		{
+		  "path": "pages/playlist-list/playlist-list",
+		  "style": {
+		    "navigationBarTitleText": "我的歌单",
+		    "navigationBarBackgroundColor": "#667eea",
+		    "navigationBarTextStyle": "white",
+		    "enablePullDownRefresh": true
+		  }
+		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",

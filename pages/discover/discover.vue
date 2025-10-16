@@ -226,12 +226,11 @@ export default {
 			})
 		},
 		
-		goToPlaylist(playlist) {
-			uni.showToast({
-				title: '歌单详情待开发',
-				icon: 'none'
-			})
-		},
+	goToPlaylist(playlist) {
+		uni.navigateTo({
+			url: `/pages/playlist-detail/playlist-detail?id=${playlist.id}`
+		})
+	},
 		
 		showMore() {
 			uni.showToast({
