@@ -359,6 +359,38 @@ export const PlaylistDetailCache = {
 	}
 }
 
+/**
+ * 新歌推荐缓存
+ */
+export const NewSongsCache = {
+	/**
+	 * 保存新歌推荐列表
+	 * @param {array} songs - 新歌列表
+	 */
+	set(songs) {
+		const key = 'new_songs_recommend'
+		// 新歌推荐缓存1小时
+		return CacheManager.set(key, songs, 60 * 60 * 1000)
+	},
+	
+	/**
+	 * 获取新歌推荐列表
+	 * @returns {array|null} 新歌列表
+	 */
+	get() {
+		const key = 'new_songs_recommend'
+		return CacheManager.get(key)
+	},
+	
+	/**
+	 * 删除新歌推荐缓存
+	 */
+	remove() {
+		const key = 'new_songs_recommend'
+		return CacheManager.remove(key)
+	}
+}
+
 // 导出缓存管理器
 export { CacheManager, CACHE_CONFIG }
 
@@ -369,6 +401,7 @@ export default {
 	SearchResultCache,
 	RankListCache,
 	PlaylistDetailCache,
+	NewSongsCache,
 	CACHE_CONFIG
 }
 

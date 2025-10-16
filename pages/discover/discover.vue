@@ -79,6 +79,7 @@
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import SongList from '@/components/SongList.vue'
 import { searchMusic, getBatchSongDetails, getBatchPlaylistDetails } from '@/utils/api.js'
+import { NewSongsCache } from '@/utils/cache.js'
 
 export default {
 	components: {
@@ -101,6 +102,11 @@ export default {
 	onLoad() {
 		this.loadPlaylists()
 		this.loadNewSongs()
+	},
+	
+	// 下拉刷新
+	onPullDownRefresh() {
+		this.refreshData()
 	},
 	methods: {
 		async loadPlaylists() {
@@ -147,49 +153,80 @@ export default {
 			}
 		},
 		
-		async loadNewSongs() {
-			// 使用统一的API方法，支持跨域代理
-			try {
-				const res = await searchMusic('热门', 0, 10)
-				
-				if (res.statusCode === 200 && res.data && res.data.result) {
-					const songs = res.data.result.songs || []
-					
-					// 先显示基础信息（使用默认封面）
-					this.newSongs = songs.map(song => ({
-						id: song.id,
-						name: song.name,
-						artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
-						albumName: song.album?.name || '未知专辑',
-						albumPic: '/static/logo.png', // 搜索接口不返回封面，统一使用默认图
-						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
-					}))
-					console.log('成功加载新歌:', this.newSongs.length, '首')
-					
-					// 批量获取歌曲详细信息（包含完整封面）
-					const songIds = songs.map(song => song.id)
-					const detailedSongs = await getBatchSongDetails(songIds)
-					
-					// 更新为完整信息
-					if (detailedSongs && detailedSongs.length > 0) {
-						this.newSongs = detailedSongs
-						console.log('成功获取歌曲封面:', detailedSongs.length, '首')
-					}
-				} else {
-					console.log('未获取到歌曲数据，响应:', res)
-					uni.showToast({
-						title: '暂无歌曲数据',
-						icon: 'none'
-					})
-				}
-			} catch (error) {
-				console.error('加载新歌失败:', error)
+	async loadNewSongs() {
+		try {
+			// 第一步：尝试从缓存加载
+			const cachedSongs = NewSongsCache.get()
+			if (cachedSongs && cachedSongs.length > 0) {
+				console.log(`✅ 新歌推荐从缓存加载 (共${cachedSongs.length}首)`)
+				this.newSongs = cachedSongs
 				uni.showToast({
-					title: '加载失败，请重试',
+					title: '从缓存加载',
+					icon: 'success',
+					duration: 1000
+				})
+				return
+			}
+			
+			// 第二步：从网络加载
+			console.log('🌐 新歌推荐从网络加载')
+			
+			uni.showLoading({
+				title: '加载中...',
+				mask: true
+			})
+			
+			const res = await searchMusic('热门', 0, 10)
+			
+			if (res.statusCode === 200 && res.data && res.data.result) {
+				const songs = res.data.result.songs || []
+				
+				// 先显示基础信息（使用默认封面）
+				this.newSongs = songs.map(song => ({
+					id: song.id,
+					name: song.name,
+					artistName: song.artists?.map(artist => artist.name).join(', ') || '未知歌手',
+					albumName: song.album?.name || '未知专辑',
+					albumPic: '/static/logo.png', // 搜索接口不返回封面，统一使用默认图
+					url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
+				}))
+				console.log('成功加载新歌基础信息:', this.newSongs.length, '首')
+				
+			// 批量获取歌曲详细信息（包含完整封面）
+			const songIds = songs.map(song => song.id)
+			const result = await getBatchSongDetails(songIds)
+			
+			// 更新为完整信息
+			if (result && result.songs && result.songs.length > 0) {
+				this.newSongs = result.songs
+				console.log('成功获取歌曲完整信息（含封面）:', result.songs.length, '首')
+				
+				// 如果有加载失败的歌曲，显示提示
+				if (result.failedCount > 0) {
+					console.warn(`部分歌曲加载失败: ${result.failedCount}首`)
+				}
+				
+				// 第三步：保存到缓存
+				NewSongsCache.set(this.newSongs)
+				console.log('💾 新歌推荐已缓存')
+			}
+			} else {
+				console.log('未获取到歌曲数据，响应:', res)
+				uni.showToast({
+					title: '暂无歌曲数据',
 					icon: 'none'
 				})
 			}
-		},
+		} catch (error) {
+			console.error('加载新歌失败:', error)
+			uni.showToast({
+				title: '加载失败，请重试',
+				icon: 'none'
+			})
+		} finally {
+			uni.hideLoading()
+		}
+	},
 		
 		formatPlayCount(count) {
 			if (count >= 100000000) {
@@ -232,12 +269,44 @@ export default {
 		})
 	},
 		
-		showMore() {
+	showMore() {
+		uni.showToast({
+			title: '更多内容待开发',
+			icon: 'none'
+		})
+	},
+	
+	// 刷新数据（清除缓存并重新加载）
+	async refreshData() {
+		try {
+			console.log('🔄 刷新发现页，清除缓存...')
+			
+			// 清除新歌推荐缓存
+			NewSongsCache.remove()
+			
+			// 重置数据
+			this.newSongs = []
+			
+			// 重新加载
+			await Promise.all([
+				this.loadPlaylists(),
+				this.loadNewSongs()
+			])
+			
 			uni.showToast({
-				title: '更多内容待开发',
+				title: '刷新成功',
+				icon: 'success'
+			})
+		} catch (error) {
+			console.error('刷新失败:', error)
+			uni.showToast({
+				title: '刷新失败',
 				icon: 'none'
 			})
+		} finally {
+			uni.stopPullDownRefresh()
 		}
+	}
 	}
 }
 </script>
