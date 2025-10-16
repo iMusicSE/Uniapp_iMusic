@@ -7,6 +7,9 @@
 				<view class="stats-info">
 					<text class="stats-value">{{ history.length }}</text>
 					<text class="stats-label">首歌曲</text>
+					<text class="stats-sub" v-if="totalHistoryInDB > history.length">
+						数据库: {{ totalHistoryInDB }}首
+					</text>
 				</view>
 			</view>
 			<view class="stats-card">
@@ -14,6 +17,9 @@
 				<view class="stats-info">
 					<text class="stats-value">{{ todayCount }}</text>
 					<text class="stats-label">今日播放</text>
+					<text class="stats-sub" v-if="failedCount > 0">
+						⚠️ {{ failedCount }}首加载失败
+					</text>
 				</view>
 			</view>
 		</view>
@@ -41,6 +47,12 @@
 			<SongList :songs="history" :showCover="true" />
 		</view>
 		
+		<!-- 加载中状态 -->
+		<view class="loading-section" v-else-if="isLoading">
+			<text class="loading-icon">⏳</text>
+			<text class="loading-text">正在加载播放历史...</text>
+		</view>
+		
 		<!-- 空状态 -->
 		<view class="empty-section" v-else>
 			<text class="empty-icon">🎧</text>
@@ -66,12 +78,26 @@ export default {
 	components: { MiniPlayer, SongList },
 	data() {
 		return {
-			todayCount: 0
+			todayCount: 0,
+			totalHistoryInDB: 0, // 数据库中的历史总数
+			failedCount: 0, // 加载失败的数量
+			isLoading: false // 是否正在加载
 		}
 	},
 	computed: {
 		...mapState(['history', 'userId']),
 		...mapGetters(['getHistory'])
+	},
+	watch: {
+		// 监听 Vuex 中的 history 变化，同步统计数据
+		'$store.state.history': {
+			handler(newHistory) {
+				if (!this.isLoading) {
+					this.calculateTodayCount()
+				}
+			},
+			deep: true
+		}
 	},
 	onLoad() {
 		this.loadHistoryData()
@@ -187,6 +213,12 @@ export default {
 	opacity: 0.9;
 }
 
+.stats-sub {
+	font-size: 20rpx;
+	opacity: 0.8;
+	margin-top: 5rpx;
+}
+
 /* 操作栏 */
 .action-bar {
 	display: flex;
@@ -291,6 +323,40 @@ export default {
 	font-size: 28rpx;
 	color: white;
 	font-weight: 500;
+}
+
+/* 加载状态 */
+.loading-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 150rpx 60rpx;
+	background: white;
+	margin-top: 20rpx;
+	border-radius: 20rpx;
+	margin: 20rpx 30rpx 0;
+	gap: 20rpx;
+}
+
+.loading-icon {
+	font-size: 120rpx;
+	animation: rotate 2s linear infinite;
+}
+
+.loading-text {
+	font-size: 28rpx;
+	color: #667eea;
+	font-weight: 500;
+}
+
+@keyframes rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 </style>
 

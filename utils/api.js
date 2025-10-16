@@ -63,14 +63,23 @@ export function getSongDetail(songId) {
 	})
 }
 
-// 批量获取歌曲详情
-export async function getBatchSongDetails(songIds) {
-	if (!songIds || songIds.length === 0) return []
+// 批量获取歌曲详情（优化版：并行请求 + 重试机制）
+export async function getBatchSongDetails(songIds, onProgress) {
+	if (!songIds || songIds.length === 0) return { songs: [], failed: [] }
 	
-	const results = []
-	for (const id of songIds) {
+	const BATCH_SIZE = 10 // 每批并行请求10个，避免API限流
+	const MAX_RETRIES = 2 // 最多重试2次
+	const TIMEOUT = 5000 // 5秒超时
+	
+	// 单个歌曲请求（带重试）
+	const fetchWithRetry = async (id, retries = MAX_RETRIES) => {
 		try {
-			const res = await getSongDetail(id)
+			const res = await Promise.race([
+				getSongDetail(id),
+				new Promise((_, reject) => 
+					setTimeout(() => reject(new Error('请求超时')), TIMEOUT)
+				)
+			])
 			
 			if (res.statusCode === 200 && res.data?.songs?.length > 0) {
 				const song = res.data.songs[0]
@@ -85,20 +94,67 @@ export async function getBatchSongDetails(songIds) {
 				const albumName = song.al?.name || song.album?.name || '未知专辑'
 				const albumPic = song.al?.picUrl || song.album?.picUrl || '/static/logo.png'
 				
-				results.push({
-					id: Number(song.id),
-					name: song.name,
-					artistName,
-					albumName,
-					albumPic,
-					url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
-				})
+				return {
+					success: true,
+					data: {
+						id: Number(song.id),
+						name: song.name,
+						artistName,
+						albumName,
+						albumPic,
+						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
+					}
+				}
 			}
+			return { success: false, id }
 		} catch (err) {
-			console.warn(`获取歌曲 ${id} 失败`, err)
+			if (retries > 0) {
+				console.warn(`歌曲 ${id} 请求失败，剩余重试次数: ${retries}`, err.message)
+				await new Promise(resolve => setTimeout(resolve, 500)) // 等待500ms后重试
+				return fetchWithRetry(id, retries - 1)
+			}
+			console.error(`歌曲 ${id} 最终获取失败:`, err.message)
+			return { success: false, id }
 		}
 	}
-	return results
+	
+	const results = []
+	const failedIds = []
+	let processedCount = 0
+	
+	// 分批并行请求
+	for (let i = 0; i < songIds.length; i += BATCH_SIZE) {
+		const batch = songIds.slice(i, i + BATCH_SIZE)
+		const batchResults = await Promise.all(batch.map(id => fetchWithRetry(id)))
+		
+		batchResults.forEach(result => {
+			if (result.success) {
+				results.push(result.data)
+			} else {
+				failedIds.push(result.id)
+			}
+		})
+		
+		processedCount += batch.length
+		
+		// 回调进度（如果提供了回调函数）
+		if (onProgress && typeof onProgress === 'function') {
+			onProgress({
+				processed: processedCount,
+				total: songIds.length,
+				success: results.length,
+				failed: failedIds.length
+			})
+		}
+	}
+	
+	return {
+		songs: results,
+		failed: failedIds,
+		total: songIds.length,
+		successCount: results.length,
+		failedCount: failedIds.length
+	}
 }
 
 export default {
