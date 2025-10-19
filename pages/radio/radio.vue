@@ -124,6 +124,8 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'vuex'
+
 export default {
 	data() {
 		return {
@@ -140,30 +142,35 @@ export default {
 			currentLetter: '',
 			scrollIntoView: '',
 			
-			// 播放器
-			currentStation: null,
-			isPlaying: false,
-			innerAudioContext: null,
-			
 			// 加载状态
 			loading: false
 		}
 	},
 	
-	onLoad() {
-		this.loadStations();
-		this.initAudioContext();
-	},
-	
-	onUnload() {
-		// 销毁音频上下文
-		if (this.innerAudioContext) {
-			this.innerAudioContext.stop();
-			this.innerAudioContext.destroy();
+	computed: {
+		...mapState('player', ['currentRadio', 'isPlaying', 'isRadioMode']),
+		
+		// 当前播放的电台
+		currentStation() {
+			return this.isRadioMode ? this.currentRadio : null
 		}
 	},
 	
+	onLoad() {
+		this.loadStations();
+	},
+	
+	onUnload() {
+		// 不需要销毁音频上下文，由全局播放器管理
+	},
+	
 	methods: {
+		...mapActions('player', {
+			playRadio: 'playRadio',
+			stopRadio: 'stopRadio',
+			playerTogglePlay: 'togglePlay'
+		}),
+		
 		// 加载电台数据
 		async loadStations() {
 			this.loading = true;
@@ -660,53 +667,6 @@ export default {
 			}, 1000);
 		},
 		
-		// 初始化音频上下文
-		initAudioContext() {
-			this.innerAudioContext = uni.createInnerAudioContext();
-			this.innerAudioContext.autoplay = false;
-			
-			// 监听播放事件
-			this.innerAudioContext.onPlay(() => {
-				console.log('开始播放:', this.currentStation.name);
-				this.isPlaying = true;
-				uni.hideLoading();
-			});
-			
-			// 监听暂停事件
-			this.innerAudioContext.onPause(() => {
-				console.log('暂停播放');
-				this.isPlaying = false;
-			});
-			
-			// 监听停止事件
-			this.innerAudioContext.onStop(() => {
-				console.log('停止播放');
-				this.isPlaying = false;
-			});
-			
-			// 监听错误事件
-			this.innerAudioContext.onError((error) => {
-				console.error('播放错误:', error);
-				uni.hideLoading();
-				uni.showToast({
-					title: '播放失败，请尝试其他电台',
-					icon: 'none',
-					duration: 2000
-				});
-				this.isPlaying = false;
-			});
-			
-			// 监听等待事件
-			this.innerAudioContext.onWaiting(() => {
-				console.log('音频加载中...');
-			});
-			
-			// 监听可以播放
-			this.innerAudioContext.onCanplay(() => {
-				console.log('音频已准备好');
-			});
-		},
-		
 		// 播放电台
 		playStation(station) {
 			console.log('准备播放电台:', station.name, station.url);
@@ -717,66 +677,19 @@ export default {
 				return;
 			}
 			
-			// 停止当前播放
-			if (this.innerAudioContext) {
-				this.innerAudioContext.stop();
-			}
-			
-			// 设置新电台
-			this.currentStation = station;
-			this.innerAudioContext.src = station.url;
-			
-			// 显示加载提示
-			uni.showLoading({
-				title: '连接中...',
-				mask: true
-			});
-			
-			// 开始播放
-			try {
-				this.innerAudioContext.play();
-			} catch (error) {
-				console.error('播放异常:', error);
-				uni.hideLoading();
-				uni.showToast({
-					title: '播放失败',
-					icon: 'none'
-				});
-			}
-			
-			// 5秒后自动隐藏加载提示
-			setTimeout(() => {
-				uni.hideLoading();
-			}, 5000);
+			// 使用全局播放器播放电台
+			this.playRadio(station);
 		},
 		
 		// 切换播放/暂停
 		togglePlay() {
 			if (!this.currentStation) return;
-			
-			if (this.isPlaying) {
-				this.innerAudioContext.pause();
-			} else {
-				uni.showLoading({
-					title: '连接中...',
-					mask: true
-				});
-				this.innerAudioContext.play();
-				
-				// 3秒后自动隐藏加载提示
-				setTimeout(() => {
-					uni.hideLoading();
-				}, 3000);
-			}
+			this.playerTogglePlay();
 		},
 		
 		// 停止播放
 		stopPlay() {
-			if (this.innerAudioContext) {
-				this.innerAudioContext.stop();
-			}
-			this.currentStation = null;
-			this.isPlaying = false;
+			this.stopRadio();
 		}
 	}
 }

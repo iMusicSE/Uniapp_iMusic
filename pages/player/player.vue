@@ -4,14 +4,30 @@
 		<view class="top-bar">
 			<text class="back-icon" @click="goBack">＜</text>
 			<view class="song-title">
-				<text class="title">{{ currentSong ? currentSong.name : '暂无播放' }}</text>
-				<text class="subtitle">{{ currentSong ? currentSong.artistName : '' }}</text>
+				<text class="title">{{ displayTitle }}</text>
+				<text class="subtitle">{{ displaySubtitle }}</text>
 			</view>
-			<text class="share-icon" @click="share">⋯</text>
+			<text v-if="!isRadioMode" class="share-icon" @click="share">⋯</text>
 		</view>
 		
-	<!-- 封面区域 -->
-	<view class="cover-section" v-if="!showLyrics" @click="toggleLyrics">
+	<!-- 电台模式 - 显示电台动画 -->
+	<view v-if="isRadioMode" class="radio-section">
+		<view class="radio-container">
+			<view class="radio-waves" :class="{ 'active': isPlaying }">
+				<view class="wave"></view>
+				<view class="wave"></view>
+				<view class="wave"></view>
+			</view>
+			<view class="radio-icon-large">📻</view>
+		</view>
+		<view class="radio-info">
+			<text class="radio-status">{{ isPlaying ? '🔴 正在播放' : '⏸ 已暂停' }}</text>
+			<text class="radio-meta">{{ currentRadio?.country || '' }} · {{ currentRadio?.bitrate || '' }}kbps</text>
+		</view>
+	</view>
+	
+	<!-- 音乐模式 - 封面区域 -->
+	<view v-else-if="!showLyrics" class="cover-section" @click="toggleLyrics">
 		<view class="cover-container" :class="{ 'rotating': isPlaying }">
 			<image 
 				class="cover-image" 
@@ -22,8 +38,8 @@
 		</view>
 	</view>
 	
-	<!-- 歌词区域 -->
-	<view class="lyrics-section" v-if="showLyrics" @click="toggleLyrics">
+	<!-- 音乐模式 - 歌词区域 -->
+	<view v-else-if="showLyrics" class="lyrics-section" @click="toggleLyrics">
 		<scroll-view 
 			id="lyrics-scroll-view"
 			class="lyrics-scroll" 
@@ -50,8 +66,8 @@
 		</scroll-view>
 	</view>
 		
-	<!-- 操作栏 -->
-	<view class="action-bar">
+	<!-- 操作栏 (仅音乐模式) -->
+	<view v-if="!isRadioMode" class="action-bar">
 		<text class="action-icon" :class="{ 'active': isFavorite(currentSong?.id) }" @click="toggleFavorite(currentSong)">
 			{{ isFavorite(currentSong?.id) ? '❤️' : '🤍' }}
 		</text>
@@ -60,8 +76,8 @@
 		<text class="action-icon" @click="showMusicInfo">🛈</text>
 	</view>
 		
-		<!-- 进度条 -->
-		<view class="progress-section">
+		<!-- 进度条 (仅音乐模式) -->
+		<view v-if="!isRadioMode" class="progress-section">
 			<text class="time-text">{{ formatTime(currentTime) }}</text>
 			<slider 
 				class="progress-slider" 
@@ -77,23 +93,36 @@
 		</view>
 		
 		<!-- 控制栏 -->
-		<view class="control-section">
-			<view class="control-btn" @click="togglePlayMode">
-				<text class="control-icon">{{ playModeIcon }}</text>
-			</view>
-			<view class="control-btn" @click="playPrevious">
-				<text class="control-icon large">⏮</text>
-			</view>
-			<view class="control-btn play-btn" @click="togglePlay">
-				<text class="control-icon extra-large">{{ isPlaying ? '⏸' : '▶' }}</text>
-			</view>
-		<view class="control-btn" @click="playNext">
-			<text class="control-icon large">⏭</text>
+		<view class="control-section" :class="{ 'radio-controls': isRadioMode }">
+			<!-- 音乐模式控制 -->
+			<template v-if="!isRadioMode">
+				<view class="control-btn" @click="togglePlayMode">
+					<text class="control-icon">{{ playModeIcon }}</text>
+				</view>
+				<view class="control-btn" @click="playPrevious">
+					<text class="control-icon large">⏮</text>
+				</view>
+				<view class="control-btn play-btn" @click="togglePlay">
+					<text class="control-icon extra-large">{{ isPlaying ? '⏸' : '▶' }}</text>
+				</view>
+				<view class="control-btn" @click="playNext">
+					<text class="control-icon large">⏭</text>
+				</view>
+				<view class="control-btn" @click="showPlaylist">
+					<text class="control-icon">☰</text>
+				</view>
+			</template>
+			
+			<!-- 电台模式控制 -->
+			<template v-else>
+				<view class="control-btn play-btn" @click="togglePlay">
+					<text class="control-icon extra-large">{{ isPlaying ? '⏸' : '▶' }}</text>
+				</view>
+				<view class="control-btn" @click="stopRadioAndBack">
+					<text class="control-icon large">⏹</text>
+				</view>
+			</template>
 		</view>
-		<view class="control-btn" @click="showPlaylist">
-			<text class="control-icon">☰</text>
-		</view>
-	</view>
 		
 		<!-- 播放列表弹窗 -->
 		<Playlist :visible="playlistVisible" @close="playlistVisible = false" />
@@ -126,8 +155,31 @@ export default {
 		...mapState('user', {
 		      userInfo: state => state  // user 模块的整个 state 映射为 this.userInfo
 		    }),
-		...mapState('player', ['currentSong', 'isPlaying', 'currentTime', 'duration', 'playMode', 'audioContext']),
+		...mapState('player', [
+			'currentSong', 
+			'isPlaying', 
+			'currentTime', 
+			'duration', 
+			'playMode', 
+			'audioContext',
+			'isRadioMode',
+			'currentRadio'
+		]),
 		...mapGetters('favorites', ['isFavorite']),
+		
+		displayTitle() {
+			if (this.isRadioMode && this.currentRadio) {
+				return this.currentRadio.name
+			}
+			return this.currentSong ? this.currentSong.name : '暂无播放'
+		},
+		
+		displaySubtitle() {
+			if (this.isRadioMode && this.currentRadio) {
+				return '在线电台'
+			}
+			return this.currentSong ? this.currentSong.artistName : ''
+		},
 		
 		playModeIcon() {
 			const icons = ['🔁', '🔂', '🔀']
@@ -145,6 +197,12 @@ export default {
 		}
 	},
 	async onLoad(options) {
+	  // 电台模式
+	  if (options.radioMode) {
+	    // 电台模式，不需要加载歌曲数据
+	    return
+	  }
+	  
 	  if (options.song) {
 	    try {
 	      const song = JSON.parse(decodeURIComponent(options.song));
@@ -260,8 +318,14 @@ export default {
 			playNext: 'player/playNext',
 			playPrevious: 'player/playPrevious',
 			togglePlayMode: 'player/togglePlayMode',
-			toggleFavorite: 'favorites/toggleFavorite'
+			toggleFavorite: 'favorites/toggleFavorite',
+			stopRadio: 'player/stopRadio'
 		}),
+		
+		stopRadioAndBack() {
+			this.stopRadio()
+			uni.navigateBack()
+		},
 		
 		goBack() {
 			uni.navigateBack()
@@ -533,6 +597,105 @@ export default {
 	opacity: 0.8;
 }
 
+/* 电台区域 */
+.radio-section {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 60rpx 0;
+	min-height: 0;
+}
+
+.radio-container {
+	position: relative;
+	width: 400rpx;
+	height: 400rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 60rpx;
+}
+
+.radio-icon-large {
+	font-size: 200rpx;
+	z-index: 2;
+	animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%, 100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-20rpx);
+	}
+}
+
+.radio-waves {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.wave {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	border: 3rpx solid rgba(255, 255, 255, 0.3);
+	opacity: 0;
+}
+
+.radio-waves.active .wave {
+	animation: wave-pulse 2s ease-out infinite;
+}
+
+.radio-waves.active .wave:nth-child(1) {
+	animation-delay: 0s;
+}
+
+.radio-waves.active .wave:nth-child(2) {
+	animation-delay: 0.6s;
+}
+
+.radio-waves.active .wave:nth-child(3) {
+	animation-delay: 1.2s;
+}
+
+@keyframes wave-pulse {
+	0% {
+		transform: scale(0.8);
+		opacity: 0.8;
+	}
+	100% {
+		transform: scale(1.5);
+		opacity: 0;
+	}
+}
+
+.radio-info {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.radio-status {
+	font-size: 32rpx;
+	font-weight: bold;
+	color: white;
+}
+
+.radio-meta {
+	font-size: 26rpx;
+	color: rgba(255, 255, 255, 0.7);
+}
+
 /* 封面区域 */
 .cover-section {
 	flex: 1;
@@ -674,6 +837,11 @@ export default {
 	justify-content: space-around;
 	align-items: center;
 	padding: 20rpx 0;
+}
+
+.control-section.radio-controls {
+	justify-content: center;
+	gap: 80rpx;
 }
 
 .control-btn {

@@ -11,7 +11,9 @@ const state = {
 	currentTime: 0,
 	duration: 0,
 	shuffledIndexes: [], // 随机播放模式下的打乱索引顺序
-	shuffledPosition: 0  // 在打乱序列中的当前位置
+	shuffledPosition: 0,  // 在打乱序列中的当前位置
+	isRadioMode: false, // 是否是电台模式
+	currentRadio: null // 当前播放的电台
 }
 
 const getters = {
@@ -44,6 +46,12 @@ const mutations = {
 	},
 	SET_DURATION(state, duration) {
 		state.duration = duration
+	},
+	SET_RADIO_MODE(state, isRadioMode) {
+		state.isRadioMode = isRadioMode
+	},
+	SET_CURRENT_RADIO(state, radio) {
+		state.currentRadio = radio
 	},
 	REMOVE_FROM_PLAYLIST(state, index) {
 		state.playlist.splice(index, 1)
@@ -275,6 +283,77 @@ const actions = {
 			commit('INSERT_TO_PLAYLIST', song)
 		}
 		uni.showToast({ title: '将在下一首播放', icon: 'success' })
+	},
+	
+	// 播放电台
+	playRadio({ commit, state }, radio) {
+		console.log('▶️  播放电台:', radio.name, radio.url)
+		
+		// 切换到电台模式
+		commit('SET_RADIO_MODE', true)
+		commit('SET_CURRENT_RADIO', radio)
+		
+		// 清空当前歌曲信息
+		commit('SET_CURRENT_SONG', null)
+		
+		// 初始化或更新 audioContext
+		if (!state.audioContext) {
+			const audioContext = uni.createInnerAudioContext()
+			commit('SET_AUDIO_CONTEXT', audioContext)
+		}
+		
+		// 停止当前播放
+		if (state.audioContext) {
+			state.audioContext.stop()
+		}
+		
+		// 设置电台URL并播放
+		state.audioContext.src = radio.url
+		
+		// 显示加载提示
+		uni.showLoading({
+			title: '连接中...',
+			mask: true
+		})
+		
+		// 开始播放
+		try {
+			state.audioContext.play()
+			commit('SET_PLAY_STATE', true)
+			console.log('✅ 电台开始播放:', radio.url)
+			
+			// 5秒后自动隐藏加载提示
+			setTimeout(() => {
+				uni.hideLoading()
+			}, 5000)
+		} catch (error) {
+			console.error('播放电台异常:', error)
+			uni.hideLoading()
+			uni.showToast({
+				title: '播放失败',
+				icon: 'none'
+			})
+		}
+	},
+	
+	// 停止电台
+	stopRadio({ commit, state }) {
+		if (state.audioContext) {
+			state.audioContext.stop()
+		}
+		commit('SET_PLAY_STATE', false)
+		commit('SET_RADIO_MODE', false)
+		commit('SET_CURRENT_RADIO', null)
+	},
+	
+	// 切换回音乐模式
+	switchToMusicMode({ commit, state }) {
+		commit('SET_RADIO_MODE', false)
+		commit('SET_CURRENT_RADIO', null)
+		if (state.audioContext) {
+			state.audioContext.stop()
+		}
+		commit('SET_PLAY_STATE', false)
 	}
 }
 
