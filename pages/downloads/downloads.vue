@@ -29,9 +29,9 @@
         <text class="action-subtitle">记录你的所有下载歌曲</text>
       </view>
       <view class="action-right">
-        <view class="action-btn" @click="refreshList" v-if="downloads.length > 0">
-          <text class="action-btn-icon">🔄</text>
-          <text class="action-btn-text">刷新</text>
+        <view class="action-btn" @click="playAll" v-if="downloads.length > 0">
+          <text class="action-btn-icon">▶️</text>
+          <text class="action-btn-text">播放全部</text>
         </view>
         <view class="action-btn danger" @click="clearAll" v-if="downloads.length > 0">
           <text class="action-btn-icon">🗑️</text>
@@ -158,9 +158,29 @@ export default {
       }
     },
 
-    refreshList() {
-      this.fetchDownloads()
-      uni.showToast({ title: '已刷新', icon: 'success' })
+    playAll() {
+      if (this.downloads.length === 0) {
+        uni.showToast({ title: '暂无下载歌曲', icon: 'none' })
+        return
+      }
+      
+      // 播放第一首，并将整个下载列表作为播放列表
+      const firstSong = {
+        downloadId: this.downloads[0].downloadId,
+        songId: this.downloads[0].musicId,
+        name: this.downloads[0].songName,
+        url: this.downloads[0].localPath,
+        artistName: this.downloads[0].artist || '未知歌手',
+        albumPic: this.downloads[0].coverUrl || '/static/logo.png',
+        albumName: this.downloads[0].album || '',
+        lyricsPath: this.downloads[0].lyricsPath || ''
+      }
+      
+      uni.navigateTo({
+        url: `/pages/player/player?song=${encodeURIComponent(JSON.stringify(firstSong))}`
+      })
+      
+      uni.showToast({ title: '开始播放', icon: 'success' })
     },
 	formatTime(time) {
 	  if (!time) return '未知时间';
@@ -259,9 +279,16 @@ export default {
   align-items: center;
   gap: 20rpx;
   padding: 30rpx;
-  background: linear-gradient(135deg, #ff7e5f 0%, #eb5e41 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16rpx;
   color: white;
+  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.25);
+  transition: all 0.3s;
+}
+
+.stats-card:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
 }
 
 .stats-icon {
@@ -327,13 +354,25 @@ export default {
   align-items: center;
   gap: 8rpx;
   padding: 12rpx 24rpx;
-  background: linear-gradient(135deg, #ff7e5f 0%, #eb5e41 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 40rpx;
   color: white;
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.4);
 }
 
 .action-btn.danger {
   background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.3);
+}
+
+.action-btn.danger:active {
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.4);
 }
 
 .action-btn-icon {
@@ -354,51 +393,79 @@ export default {
 .list-item {
   display: flex;
   align-items: center;
-  padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid #eee;
+  padding: 25rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  transition: background-color 0.3s;
+}
+
+.list-item:active {
+  background-color: #f8f8f8;
 }
 
 .cover {
   width: 120rpx;
   height: 120rpx;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.15);
 }
 
 .info {
   flex: 1;
-  margin-left: 20rpx;
+  margin-left: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 6rpx;
+  gap: 8rpx;
 }
 
 .name {
   font-size: 30rpx;
-  font-weight: bold;
+  font-weight: 600;
   color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.artist, .time {
+.artist {
   font-size: 24rpx;
-  color: #777;
+  color: #999;
+}
+
+.time {
+  font-size: 22rpx;
+  color: #bbb;
 }
 
 .actions {
   display: flex;
   flex-direction: row;
-  gap: 10rpx;
+  gap: 12rpx;
 }
 
 .btn {
-  background-color: #ff7e5f;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   font-size: 24rpx;
   border-radius: 30rpx;
-  padding: 10rpx 20rpx;
+  padding: 12rpx 24rpx;
+  border: none;
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.25);
+  transition: all 0.3s;
+}
+
+.btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.3);
 }
 
 .btn.danger {
-  background-color: #e74c3c;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.25);
+}
+
+.btn.danger:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3);
 }
 
 /* 空状态 */
@@ -435,9 +502,16 @@ export default {
 
 .empty-btn {
   padding: 20rpx 60rpx;
-  background: linear-gradient(135deg, #ff7e5f 0%, #eb5e41 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 40rpx;
   color: white;
+  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s;
+}
+
+.empty-btn:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.4);
 }
 
 .empty-btn-text {
@@ -467,7 +541,7 @@ export default {
 
 .loading-text {
   font-size: 28rpx;
-  color: #ff7e5f;
+  color: #667eea;
   font-weight: 500;
 }
 
