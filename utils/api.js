@@ -162,13 +162,34 @@ export async function getBatchPlaylistDetails(playlistIds) {
 	return orderedPlaylists
 }
 
-// 批量获取歌曲详情（优化版：并行请求 + 重试机制）
+// 批量获取歌曲详情（优化版：缓存优先 + 并行请求 + 重试机制）
 export async function getBatchSongDetails(songIds, onProgress) {
 	if (!songIds || songIds.length === 0) return { songs: [], failed: [] }
+	
+	// 导入缓存模块
+	const { SongDetailCache } = await import('./cache.js')
 	
 	const BATCH_SIZE = 10 // 每批并行请求10个，避免API限流
 	const MAX_RETRIES = 2 // 最多重试2次
 	const TIMEOUT = 5000 // 5秒超时
+	
+	// 第一步：先从缓存中加载
+	const cachedSongs = []
+	const uncachedIds = []
+	let cacheHitCount = 0
+	
+	for (const id of songIds) {
+		const cached = SongDetailCache.get(id)
+		if (cached) {
+			cachedSongs.push(cached)
+			cacheHitCount++
+			console.log(`✓ 歌曲 ${id} 从缓存加载`)
+		} else {
+			uncachedIds.push(id)
+		}
+	}
+	
+	console.log(`📊 缓存命中: ${cacheHitCount}/${songIds.length}, 需网络请求: ${uncachedIds.length}`)
 	
 	// 单个歌曲请求（带重试）
 	const fetchWithRetry = async (id, retries = MAX_RETRIES) => {
@@ -193,66 +214,93 @@ export async function getBatchSongDetails(songIds, onProgress) {
 				const albumName = song.al?.name || song.album?.name || '未知专辑'
 				const albumPic = song.al?.picUrl || song.album?.picUrl || '/static/logo.png'
 				
+				const songData = {
+					id: Number(song.id),
+					name: song.name,
+					artistName,
+					albumName,
+					albumPic,
+					url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
+				}
+				
+				// 保存到缓存（7天有效期）
+				SongDetailCache.set(song.id, songData)
+				console.log(`✓ 歌曲 ${id} 加载成功并已缓存`)
+				
 				return {
 					success: true,
-					data: {
-						id: Number(song.id),
-						name: song.name,
-						artistName,
-						albumName,
-						albumPic,
-						url: `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`
-					}
+					data: songData
 				}
 			}
 			return { success: false, id }
 		} catch (err) {
 			if (retries > 0) {
-				console.warn(`歌曲 ${id} 请求失败，剩余重试次数: ${retries}`, err.message)
+				console.warn(`⚠️ 歌曲 ${id} 请求失败，剩余重试次数: ${retries}`, err.message)
 				await new Promise(resolve => setTimeout(resolve, 500)) // 等待500ms后重试
 				return fetchWithRetry(id, retries - 1)
 			}
-			console.error(`歌曲 ${id} 最终获取失败:`, err.message)
+			console.error(`❌ 歌曲 ${id} 最终获取失败:`, err.message)
 			return { success: false, id }
 		}
 	}
 	
-	const results = []
+	const networkSongs = []
 	const failedIds = []
-	let processedCount = 0
+	let processedCount = cacheHitCount // 已处理的数量从缓存命中数开始
 	
-	// 分批并行请求
-	for (let i = 0; i < songIds.length; i += BATCH_SIZE) {
-		const batch = songIds.slice(i, i + BATCH_SIZE)
-		const batchResults = await Promise.all(batch.map(id => fetchWithRetry(id)))
-		
-		batchResults.forEach(result => {
-			if (result.success) {
-				results.push(result.data)
-			} else {
-				failedIds.push(result.id)
+	// 第二步：分批并行请求未缓存的歌曲
+	if (uncachedIds.length > 0) {
+		for (let i = 0; i < uncachedIds.length; i += BATCH_SIZE) {
+			const batch = uncachedIds.slice(i, i + BATCH_SIZE)
+			const batchResults = await Promise.all(batch.map(id => fetchWithRetry(id)))
+			
+			batchResults.forEach(result => {
+				if (result.success) {
+					networkSongs.push(result.data)
+				} else {
+					failedIds.push(result.id)
+				}
+			})
+			
+			processedCount += batch.length
+			
+			// 回调进度（如果提供了回调函数）
+			if (onProgress && typeof onProgress === 'function') {
+				onProgress({
+					processed: processedCount,
+					total: songIds.length,
+					success: cachedSongs.length + networkSongs.length,
+					failed: failedIds.length
+				})
 			}
-		})
-		
-		processedCount += batch.length
-		
-		// 回调进度（如果提供了回调函数）
+		}
+	} else {
+		// 全部命中缓存，直接回调完成进度
 		if (onProgress && typeof onProgress === 'function') {
 			onProgress({
-				processed: processedCount,
+				processed: songIds.length,
 				total: songIds.length,
-				success: results.length,
-				failed: failedIds.length
+				success: cachedSongs.length,
+				failed: 0
 			})
 		}
 	}
 	
+	// 合并缓存和网络获取的歌曲，并按原始ID顺序排列
+	const allSongs = [...cachedSongs, ...networkSongs]
+	const orderedSongs = songIds
+		.map(id => allSongs.find(s => Number(s.id) === Number(id)))
+		.filter(s => s !== undefined)
+	
+	console.log(`✅ 歌曲详情加载完成: 成功 ${orderedSongs.length}/${songIds.length}, 失败 ${failedIds.length}`)
+	
 	return {
-		songs: results,
+		songs: orderedSongs,
 		failed: failedIds,
 		total: songIds.length,
-		successCount: results.length,
-		failedCount: failedIds.length
+		successCount: orderedSongs.length,
+		failedCount: failedIds.length,
+		cacheHitCount: cacheHitCount // 新增：缓存命中数
 	}
 }
 
