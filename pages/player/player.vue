@@ -196,33 +196,36 @@ export default {
 		    // 如果已经有 audioContext，先停止
 		    if (this.audioContext) {
 		      this.audioContext.pause();
-		      this.audioContext = null;
+		      this.$store.commit('player/SET_AUDIO_CONTEXT', null);
 		    }
 		
 		    // uniapp 创建 audioContext
-		    this.audioContext = uni.createInnerAudioContext();
-		    this.audioContext.src = url;        // 本地文件路径或网络路径
-		    this.audioContext.autoplay = true;  // 自动播放
-		    this.audioContext.loop = false;
+		    const audioCtx = uni.createInnerAudioContext();
+		    audioCtx.src = url;        // 本地文件路径或网络路径
+		    audioCtx.autoplay = true;  // 自动播放
+		    audioCtx.loop = false;
 		
 	    // 监听播放状态
-	    this.audioContext.onPlay(() => {
+	    audioCtx.onPlay(() => {
 	      this.$store.commit('player/SET_PLAY_STATE', true);
 	    });
 	
-	    this.audioContext.onPause(() => {
+	    audioCtx.onPause(() => {
 	      this.$store.commit('player/SET_PLAY_STATE', false);
 	    });
 	
-	    this.audioContext.onEnded(() => {
+	    audioCtx.onEnded(() => {
 	      this.$store.commit('player/SET_PLAY_STATE', false);
 	      this.playNext();  // 播放下一首
 	    });
 		
-		    this.audioContext.onTimeUpdate(() => {
-		      this.$store.commit('player/SET_CURRENT_TIME', this.audioContext.currentTime);
-		      this.$store.commit('player/SET_DURATION', this.audioContext.duration);
+		    audioCtx.onTimeUpdate(() => {
+		      this.$store.commit('player/SET_CURRENT_TIME', audioCtx.currentTime);
+		      this.$store.commit('player/SET_DURATION', audioCtx.duration);
 		    });
+		    
+		    // 通过 mutation 设置 audioContext
+		    this.$store.commit('player/SET_AUDIO_CONTEXT', audioCtx);
 		  },
 		
 		...mapActions({
