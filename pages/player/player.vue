@@ -105,6 +105,8 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 import Playlist from '@/components/Playlist.vue'
 import { getLyrics } from '@/utils/api.js'
 
+
+
 export default {
 	components: {
 		Playlist
@@ -121,6 +123,9 @@ export default {
 		}
 	},
 	computed: {
+		...mapState('user', {
+		      userInfo: state => state  // user 模块的整个 state 映射为 this.userInfo
+		    }),
 		...mapState('player', ['currentSong', 'isPlaying', 'currentTime', 'duration', 'playMode', 'audioContext']),
 		...mapGetters('favorites', ['isFavorite']),
 		
@@ -139,20 +144,95 @@ export default {
 			this.updateCurrentLyric()
 		}
 	},
-	onLoad() {
-		if (this.currentSong) {
-			this.loadLyrics(this.currentSong.id)
-		}
-		
-		// 监听音频上下文更新
-		if (this.audioContext) {
-			this.audioContext.onTimeUpdate(() => {
-				this.$store.commit('player/SET_CURRENT_TIME', this.audioContext.currentTime)
-				this.$store.commit('player/SET_DURATION', this.audioContext.duration)
-			})
-		}
+	async onLoad(options) {
+	  if (options.song) {
+	    try {
+	      const song = JSON.parse(decodeURIComponent(options.song));
+	      this.$store.commit('player/SET_CURRENT_SONG', song);
+	      console.log('歌词路径:', song.lyricsPath);
+	
+	      // 初始化音频
+	      if (song.localPath || song.url) {
+	        this.initAudio(song.localPath || song.url);
+	      }
+	
+	      // 优先加载本地歌词
+	      if (song.lyricsPath) {
+	        try {
+	          const res = await fetch(song.lyricsPath);
+	          const text = await res.text();
+	          if (text && text.length > 0) {
+	            this.parseLyrics(text);
+	            console.log("✅ 已加载本地歌词");
+	            return;
+	          }
+	        } catch (err) {
+	          console.warn("⚠️ 本地歌词读取失败，尝试网络歌词");
+	        }
+	      }
+	
+	      // 如果没有本地歌词或失败，则走网络歌词
+	      await this.loadLyrics(song.id || song.songId);
+	
+	    } catch (err) {
+	      console.error("解析歌曲数据失败:", err);
+	    }
+		  
+	  }else if(this.currentSong){
+		  this.loadLyrics(this.currentSong.id);
+
+	  }
+	
+	  // 音频时间同步
+	  if (this.audioContext) {
+	    this.audioContext.onTimeUpdate(() => {
+	      this.$store.commit("player/SET_CURRENT_TIME", this.audioContext.currentTime);
+	      this.$store.commit("player/SET_DURATION", this.audioContext.duration);
+	    });
+	  }
 	},
 	methods: {
+		initAudio(url) {
+		    // 如果已经有 audioContext，先停止
+		    if (this.audioContext) {
+		      this.audioContext.pause();
+		      this.audioContext = null;
+		    }
+		
+		    // uniapp 创建 audioContext
+		    this.audioContext = uni.createInnerAudioContext();
+		    this.audioContext.src = url;        // 本地文件路径或网络路径
+		    this.audioContext.autoplay = true;  // 自动播放
+		    this.audioContext.loop = false;
+		
+		    // 监听播放状态
+		    this.audioContext.onPlay(() => {
+		      this.$store.commit('player/SET_IS_PLAYING', true);
+		    });
+		
+		    this.audioContext.onPause(() => {
+		      this.$store.commit('player/SET_IS_PLAYING', false);
+		    });
+		
+		    this.audioContext.onEnded(() => {
+		      this.$store.commit('player/SET_IS_PLAYING', false);
+		      this.playNext();  // 播放下一首
+		    });
+		
+		    this.audioContext.onTimeUpdate(() => {
+		      this.$store.commit('player/SET_CURRENT_TIME', this.audioContext.currentTime);
+		      this.$store.commit('player/SET_DURATION', this.audioContext.duration);
+		    });
+		  },
+		  togglePlay() {
+		      if (!this.audioContext) return;
+		      if (this.$store.state.player.isPlaying) {
+		        this.audioContext.pause();
+		      } else {
+		        this.audioContext.play();
+		      }
+		    },
+		  
 		...mapActions({
 			togglePlay: 'player/togglePlay',
 			playNext: 'player/playNext',
@@ -177,12 +257,68 @@ export default {
 			})
 		},
 		
-		downloadSong() {
-			uni.showToast({
-				title: '下载功能待开发',
-				icon: 'none'
-			})
+		
+		async downloadSong() {
+		  if (!this.currentSong || !this.currentSong.url) {
+		    return uni.showToast({ title: '暂无可下载的歌曲', icon: 'none' });
+		  }
+		
+		  const userId = this.userInfo.userId;
+		  if (!userId) {
+		    return uni.showToast({ title: '请先登录后下载', icon: 'none' });
+		  }
+		
+		  const song = this.currentSong;
+		  uni.showLoading({ title: '正在下载...' });
+		
+		  try {
+		    // ✅ 获取歌词文本
+		    let lyricsText = '';
+		    try {
+		      const lyricsRes = await getLyrics(song.id);
+		      if (lyricsRes.data?.lrc?.lyric) {
+		        lyricsText = lyricsRes.data.lrc.lyric;
+		      }
+		    } catch (e) {
+		      console.warn('获取歌词失败:', e);
+		    }
+		
+		    // 调用下载接口
+		    const res = await uni.request({
+		      url: 'http://localhost:3000/downloads/add', // 你的下载接口
+		      method: 'POST',
+		      data: {
+		        userId,
+		        musicId: song.id,
+		        songName: song.name,
+		        artist: song.artistName || '未知歌手',
+		        album: song.albumName || '未知专辑',
+		        coverUrl: song.albumPic || '',
+		        fileUrl: song.url,        // 歌曲 mp3
+		        lyricsText                // ✅ 传歌词文本给后端
+		      }
+		    });
+		
+		    console.log('接口返回:', res);
+		
+		    if (res.data.success) {
+		      uni.showToast({ title: '下载成功', icon: 'success' });
+		      console.log('✅ 音乐路径:', res.data.musicPath);
+		      console.log('✅ 歌词路径:', res.data.lyricsPath);
+		    } else {
+		      uni.showToast({ title: '下载失败', icon: 'none' });
+		      console.warn('❌ 下载失败：', res.data.message);
+		    }
+		
+		  } catch (err) {
+		    console.error('❌ 下载出错：', err);
+		    uni.showToast({ title: '下载出错', icon: 'none' });
+		  } finally {
+		    uni.hideLoading();
+		  }
 		},
+
+
 		
 	comment() {
 		uni.showToast({
@@ -208,22 +344,22 @@ export default {
 		
 		// 加载歌词
 		async loadLyrics(songId) {
-			this.loadingLyrics = true
-			this.lyrics = []
-			this.currentLyricIndex = 0
-			
-			try {
-				const res = await getLyrics(songId)
-				
-				if (res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {
-					this.parseLyrics(res.data.lrc.lyric)
-				}
-			} catch (error) {
-				console.error('加载歌词错误:', error)
-			} finally {
-				this.loadingLyrics = false
-			}
-		},
+					this.loadingLyrics = true
+					this.lyrics = []
+					this.currentLyricIndex = 0
+					
+					try {
+						const res = await getLyrics(songId)
+						
+						if (res.statusCode === 200 && res.data && res.data.lrc && res.data.lrc.lyric) {
+							this.parseLyrics(res.data.lrc.lyric)
+						}
+					} catch (error) {
+						console.error('加载歌词错误:', error)
+					} finally {
+						this.loadingLyrics = false
+					}
+				},
 		
 		// 解析歌词
 		parseLyrics(lrcText) {
