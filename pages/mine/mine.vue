@@ -42,7 +42,7 @@
 			</view>
 			<view class="menu-item" @click="goToRadio">
 				<text class="menu-icon">📻</text>
-				<text class="menu-text">我的电台</text>
+				<text class="menu-text">在线电台</text>
 			</view>
 		<view class="menu-item" @click="goToPlaylist">
 			<text class="menu-icon">📁</text>
@@ -283,7 +283,7 @@ export default {
     },
 
     goToRadio() {
-      uni.showToast({ title: '我的电台功能开发中', icon: 'none' })
+      uni.navigateTo({ url: '/pages/radio/radio' })
     },
 
       goToPlaylist() {
