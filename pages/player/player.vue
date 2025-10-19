@@ -148,11 +148,19 @@ export default {
 	  if (options.song) {
 	    try {
 	      const song = JSON.parse(decodeURIComponent(options.song));
-	      this.$store.commit('player/SET_CURRENT_SONG', song);
+	      
+	      // 检查是否是同一首歌
+	      const isSameSong = this.currentSong && this.currentSong.id === song.id;
+	      
+	      // 只有在切换歌曲时才更新currentSong
+	      if (!isSameSong) {
+	        this.$store.commit('player/SET_CURRENT_SONG', song);
+	      }
+	      
 	      console.log('歌词路径:', song.lyricsPath);
 	
-	      // 初始化音频
-	      if (song.localPath || song.url) {
+	      // 只有在没有audioContext或切换歌曲时才重新初始化音频
+	      if (!isSameSong && (song.localPath || song.url)) {
 	        this.initAudio(song.localPath || song.url);
 	      }
 	
@@ -178,9 +186,8 @@ export default {
 	      console.error("解析歌曲数据失败:", err);
 	    }
 		  
-	  }else if(this.currentSong){
+	  } else if(this.currentSong) {
 		  this.loadLyrics(this.currentSong.id);
-
 	  }
 	
 	  // 音频时间同步
