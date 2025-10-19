@@ -48,9 +48,11 @@ export default {
 		}),
 		
 		goToPlayer() {
-			uni.navigateTo({
-				url: '/pages/player/player'
-			})
+		  if (!this.currentSong) return;
+		
+		  uni.navigateTo({
+		    url: `/pages/player/player?song=${encodeURIComponent(JSON.stringify(this.currentSong))}`
+		  })
 		}
 	}
 }
