@@ -67,16 +67,18 @@
 		        "navigationBarTitleText": "注册"
 		      }
 		    },
-		{
-		  "path": "pages/settings/settings",
-		  "style": {
-		    "navigationBarTitleText": "设置"
-		  },
-		  "path": "pages/downloads/downloads",
-		    "style": {
-		      "navigationBarTitleText": "我的下载"
-		    }
-		},
+	{
+	  "path": "pages/settings/settings",
+	  "style": {
+	    "navigationBarTitleText": "设置"
+	  }
+	},
+	{
+	  "path": "pages/downloads/downloads",
+	  "style": {
+	    "navigationBarTitleText": "我的下载"
+	  }
+	},
 		{
 		  "path": "pages/playlist-detail/playlist-detail",
 		  "style": {
