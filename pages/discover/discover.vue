@@ -33,7 +33,7 @@
 				<view class="action-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
 					<text class="icon">📻</text>
 				</view>
-				<text class="action-text">私人电台</text>
+				<text class="action-text">在线电台</text>
 			</view>
 		</view>
 		
