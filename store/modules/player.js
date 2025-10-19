@@ -103,12 +103,16 @@ const actions = {
 		console.log('▶️  [DEBUG-前端] playSong 被调用')
 		console.log('  ├─ song:', song)
 		console.log('  ├─ song.id:', song?.id)
+		console.log('  ├─ song.url:', song?.url)
 		console.log('  └─ 当前 userId:', rootState.user.userId)
 		
 		let enrichedSong = song
 		
-		// 如果歌曲封面不完整，先获取详细信息
-		if (!song.albumPic || song.albumPic === '/static/logo.png') {
+		// 如果是下载的本地文件，跳过获取详细信息
+		const isLocalFile = song.url && !song.url.startsWith('http')
+		
+		// 如果歌曲封面不完整且不是本地文件，先获取详细信息
+		if (!isLocalFile && (!song.albumPic || song.albumPic === '/static/logo.png')) {
 			try {
 				const res = await getSongDetail(song.id)
 				
@@ -158,11 +162,17 @@ const actions = {
 		dispatch('history/addHistory', enrichedSong, { root: true })
 		dispatch('history/syncHistory', enrichedSong, { root: true })
 
+		// 初始化或更新 audioContext
+		if (!state.audioContext) {
+			const audioContext = uni.createInnerAudioContext()
+			commit('SET_AUDIO_CONTEXT', audioContext)
+		}
+		
 		if (state.audioContext) {
 			state.audioContext.src = enrichedSong.url
 			state.audioContext.play()
 			commit('SET_PLAY_STATE', true)
-			console.log('  └─ ✅ 歌曲开始播放')
+			console.log('  └─ ✅ 歌曲开始播放:', enrichedSong.url)
 		}
 	},
 

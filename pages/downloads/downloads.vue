@@ -51,7 +51,7 @@
         </view>
 
         <view class="actions">
-          <button class="btn" @click="playSong(item)">▶️</button>
+          <button class="btn" @click="playDownloadSong(item)">▶️</button>
           <button class="btn danger" @click="deleteDownload(item.downloadId)">🗑️</button>
         </view>
       </view>
@@ -78,7 +78,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import { getApiUrl } from '@/utils/config.js'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 
@@ -100,7 +100,8 @@ export default {
   onShow() {
     this.fetchDownloads()
   },
-  methods: { 
+  methods: {
+    ...mapActions('player', ['playSong']), 
 	  
     async fetchDownloads() {
       if (!this.userId) {
@@ -158,29 +159,36 @@ export default {
       }
     },
 
-    playAll() {
+    async playAll() {
       if (this.downloads.length === 0) {
         uni.showToast({ title: '暂无下载歌曲', icon: 'none' })
         return
       }
       
-      // 播放第一首，并将整个下载列表作为播放列表
-      const firstSong = {
-        downloadId: this.downloads[0].downloadId,
-        songId: this.downloads[0].musicId,
-        name: this.downloads[0].songName,
-        url: this.downloads[0].localPath,
-        artistName: this.downloads[0].artist || '未知歌手',
-        albumPic: this.downloads[0].coverUrl || '/static/logo.png',
-        albumName: this.downloads[0].album || '',
-        lyricsPath: this.downloads[0].lyricsPath || ''
-      }
+      // 将下载列表转换为播放列表格式
+      const playlist = this.downloads.map(item => ({
+        id: item.musicId,
+        name: item.songName,
+        url: item.localPath,
+        artistName: item.artist || '未知歌手',
+        albumPic: item.coverUrl || '/static/logo.png',
+        albumName: item.album || '',
+        lyricsPath: item.lyricsPath || '',
+        downloadId: item.downloadId
+      }))
       
-      uni.navigateTo({
-        url: `/pages/player/player?song=${encodeURIComponent(JSON.stringify(firstSong))}`
+      // 使用 vuex action 播放第一首歌并设置播放列表
+      await this.playSong({
+        song: playlist[0],
+        playlist: playlist
       })
       
-      uni.showToast({ title: '开始播放', icon: 'success' })
+      // 跳转到播放器页面
+      uni.navigateTo({
+        url: '/pages/player/player'
+      })
+      
+      uni.showToast({ title: '开始播放全部', icon: 'success' })
     },
 	formatTime(time) {
 	  if (!time) return '未知时间';
@@ -234,20 +242,40 @@ export default {
 	 },
 
 	
-	playSong(item) {
-	  const songData = {
-	   downloadId: item.downloadId,
-		songId: item.musicId,
+	async playDownloadSong(item) {
+	  // 将下载列表转换为播放列表格式
+	  const playlist = this.downloads.map(download => ({
+	    id: download.musicId,
+	    name: download.songName,
+	    url: download.localPath,
+	    artistName: download.artist || '未知歌手',
+	    albumPic: download.coverUrl || '/static/logo.png',
+	    albumName: download.album || '',
+	    lyricsPath: download.lyricsPath || '',
+	    downloadId: download.downloadId
+	  }))
+	  
+	  // 找到当前点击的歌曲
+	  const currentSong = {
+	    id: item.musicId,
 	    name: item.songName,
-	    url: item.localPath,        // 本地文件路径
+	    url: item.localPath,
 	    artistName: item.artist || '未知歌手',
 	    albumPic: item.coverUrl || '/static/logo.png',
 	    albumName: item.album || '',
-		 lyricsPath: item.lyricsPath || '', 
+	    lyricsPath: item.lyricsPath || '',
+	    downloadId: item.downloadId
 	  }
-	
+	  
+	  // 使用 vuex action 播放歌曲并设置播放列表
+	  await this.playSong({
+	    song: currentSong,
+	    playlist: playlist
+	  })
+	  
+	  // 跳转到播放器页面
 	  uni.navigateTo({
-	    url: `/pages/player/player?song=${encodeURIComponent(JSON.stringify(songData))}`
+	    url: '/pages/player/player'
 	  })
 	}
 

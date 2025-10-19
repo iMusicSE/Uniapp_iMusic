@@ -158,12 +158,12 @@ export default {
 	      }
 	      
 	      console.log('歌词路径:', song.lyricsPath);
-	
+
 	      // 只有在没有audioContext或切换歌曲时才重新初始化音频
 	      if (!isSameSong && (song.localPath || song.url)) {
 	        this.initAudio(song.localPath || song.url);
 	      }
-	
+
 	      // 优先加载本地歌词
 	      if (song.lyricsPath) {
 	        try {
@@ -178,18 +178,38 @@ export default {
 	          console.warn("⚠️ 本地歌词读取失败，尝试网络歌词");
 	        }
 	      }
-	
+
 	      // 如果没有本地歌词或失败，则走网络歌词
 	      await this.loadLyrics(song.id || song.songId);
-	
+
 	    } catch (err) {
 	      console.error("解析歌曲数据失败:", err);
 	    }
 		  
 	  } else if(this.currentSong) {
+	    // 从 store 加载歌曲时，也需要初始化 audio（如果还没有的话）
+	    console.log('从 store 加载歌曲:', this.currentSong);
+	    if (!this.audioContext && this.currentSong.url) {
+	      this.initAudio(this.currentSong.url);
+	    }
+	    
+	    // 加载歌词
+	    if (this.currentSong.lyricsPath) {
+	      try {
+	        const res = await fetch(this.currentSong.lyricsPath);
+	        const text = await res.text();
+	        if (text && text.length > 0) {
+	          this.parseLyrics(text);
+	          console.log("✅ 已加载本地歌词");
+	          return;
+	        }
+	      } catch (err) {
+	        console.warn("⚠️ 本地歌词读取失败，尝试网络歌词");
+	      }
+	    }
 		  this.loadLyrics(this.currentSong.id);
 	  }
-	
+
 	  // 音频时间同步
 	  if (this.audioContext) {
 	    this.audioContext.onTimeUpdate(() => {
