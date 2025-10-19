@@ -205,34 +205,26 @@ export default {
 		    this.audioContext.autoplay = true;  // 自动播放
 		    this.audioContext.loop = false;
 		
-		    // 监听播放状态
-		    this.audioContext.onPlay(() => {
-		      this.$store.commit('player/SET_IS_PLAYING', true);
-		    });
-		
-		    this.audioContext.onPause(() => {
-		      this.$store.commit('player/SET_IS_PLAYING', false);
-		    });
-		
-		    this.audioContext.onEnded(() => {
-		      this.$store.commit('player/SET_IS_PLAYING', false);
-		      this.playNext();  // 播放下一首
-		    });
+	    // 监听播放状态
+	    this.audioContext.onPlay(() => {
+	      this.$store.commit('player/SET_PLAY_STATE', true);
+	    });
+	
+	    this.audioContext.onPause(() => {
+	      this.$store.commit('player/SET_PLAY_STATE', false);
+	    });
+	
+	    this.audioContext.onEnded(() => {
+	      this.$store.commit('player/SET_PLAY_STATE', false);
+	      this.playNext();  // 播放下一首
+	    });
 		
 		    this.audioContext.onTimeUpdate(() => {
 		      this.$store.commit('player/SET_CURRENT_TIME', this.audioContext.currentTime);
 		      this.$store.commit('player/SET_DURATION', this.audioContext.duration);
 		    });
 		  },
-		  togglePlay() {
-		      if (!this.audioContext) return;
-		      if (this.$store.state.player.isPlaying) {
-		        this.audioContext.pause();
-		      } else {
-		        this.audioContext.play();
-		      }
-		    },
-		  
+		
 		...mapActions({
 			togglePlay: 'player/togglePlay',
 			playNext: 'player/playNext',
