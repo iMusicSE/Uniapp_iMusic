@@ -38,7 +38,7 @@
 			</view>
 			<view class="menu-item" @click="goToDownload">
 				<text class="menu-icon">📥</text>
-				<text class="menu-text">下载管理</text>
+				<text class="menu-text">我的下载</text>
 			</view>
 			<view class="menu-item" @click="goToRadio">
 				<text class="menu-icon">📻</text>
@@ -279,7 +279,7 @@ export default {
     },
 
     goToDownload() {
-      uni.showToast({ title: '下载管理功能开发中', icon: 'none' })
+      uni.navigateTo({ url: '/pages/downloads/downloads' })
     },
 
     goToRadio() {
