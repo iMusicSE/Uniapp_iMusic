@@ -147,7 +147,7 @@ export default {
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.5);
-	z-index: 9999;
+	z-index: 999;
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-end;
