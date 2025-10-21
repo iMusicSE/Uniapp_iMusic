@@ -73,6 +73,7 @@ iMusic/
 │   │   ├── player/             # 播放器页
 │   │   ├── login/              # 登录页
 │   │   ├── register/           # 注册页
+│   │   ├── radio/              # 电台页
 │   │   ├── settings/           # 设置页
 │   │   ├── history/            # 播放历史
 │   │   ├── category-recommend/ # 分类推荐
