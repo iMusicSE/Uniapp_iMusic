@@ -99,10 +99,10 @@ export default {
 			console.log('  └─ ⚠️ 已设置基本用户信息（忽略数据加载失败）');
 		}
 
-        // 跳转到 discover 页面（tabBar 页面）
+        // 跳转到mine页面
         setTimeout(() => {
           uni.switchTab({
-            url: '/pages/discover/discover'
+            url: '/pages/mine/mine'
           });
         }, 800);
       } else {
